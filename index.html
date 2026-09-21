@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Sinapse</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -292,7 +295,7 @@
     ]
   };
 
-  var sb=null, session=null, uid=null;
+  var sb=null, session=null, uid=null, recovering=false;
   var notes=[], folders=[], booted=false;
   var view={name:'folder', folderId:'inbox', noteId:null, tag:null, q:''};
   var editing=false, conn='connecting'; // connecting | ok | off
@@ -447,14 +450,43 @@
   function hideAuth(){ $('#auth').hidden=true; $('#app').hidden=false; }
   function setSignMode(mode){
     signMode=mode;
-    $('#authBtn').textContent = mode==='in'?'Entrar':'Criar conta';
-    $('#authSub').textContent = mode==='in'?'Entre para acessar suas notas em qualquer aparelho.':'Crie sua conta — use o mesmo e-mail/senha nos três aparelhos.';
-    $('#authToggle').innerHTML = mode==='in'?'Ainda não tem conta? <button id="authSwitch" type="button">Criar conta</button>':'Já tem conta? <button id="authSwitch" type="button">Entrar</button>';
+    var showEmail=(mode!=='recover');
+    var eIn=$('#authEmail'), eLbl=document.querySelector('label[for="authEmail"]'), pLbl=document.querySelector('label[for="authPass"]');
+    if(eIn)eIn.style.display=showEmail?'':'none';
+    if(eLbl)eLbl.style.display=showEmail?'':'none';
+    if(pLbl)pLbl.textContent=(mode==='recover'?'Nova senha':'Senha');
+    $('#authBtn').textContent = mode==='in'?'Entrar':mode==='up'?'Criar conta':'Salvar nova senha';
+    $('#authSub').textContent = mode==='in'?'Entre para acessar suas notas em qualquer aparelho.':mode==='up'?'Crie sua conta — use o mesmo e-mail/senha nos três aparelhos.':'Defina uma nova senha para sua conta.';
     $('#authPass').setAttribute('autocomplete', mode==='in'?'current-password':'new-password');
-    $('#authSwitch').onclick=function(){ setSignMode(mode==='in'?'up':'in'); var mm=$('#authMsg'); mm.hidden=true; };
+    if(mode==='recover'){ $('#authToggle').innerHTML=''; }
+    else if(mode==='in'){ $('#authToggle').innerHTML='Ainda não tem conta? <button id="authSwitch" type="button">Criar conta</button><div style="margin-top:10px"><button id="authForgot" type="button" style="border:none;background:none;color:var(--muted);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer">Esqueci minha senha</button></div>'; }
+    else { $('#authToggle').innerHTML='Já tem conta? <button id="authSwitch" type="button">Entrar</button>'; }
+    var sw=$('#authSwitch'); if(sw)sw.onclick=function(){ setSignMode(signMode==='in'?'up':'in'); $('#authMsg').hidden=true; };
+    var fg=$('#authForgot'); if(fg)fg.onclick=doForgot;
+  }
+  function doForgot(){
+    var email=($('#authEmail').value||'').trim();
+    if(!email){ showAuth('Digite seu e-mail no campo acima primeiro.','err'); return; }
+    showAuth('Enviando link…','ok');
+    sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}).then(function(r){
+      if(r.error)showAuth('Não consegui enviar: '+r.error.message,'err');
+      else showAuth('Link de redefinição enviado para '+email+'. Confira o e-mail (e o spam) e abra no mesmo aparelho.','ok');
+    }).catch(function(){ showAuth('Erro de conexão. Tente de novo.','err'); });
   }
   function doAuth(){
-    var email=($('#authEmail').value||'').trim(), pass=$('#authPass').value||'';
+    var pass=$('#authPass').value||'';
+    if(signMode==='recover'){
+      if(pass.length<6){ showAuth('A senha precisa de ao menos 6 caracteres.','err'); return; }
+      $('#authBtn').disabled=true; $('#authBtn').textContent='Salvando…';
+      sb.auth.updateUser({password:pass}).then(function(r){
+        $('#authBtn').disabled=false; setSignMode('recover');
+        if(r.error){ showAuth('Erro: '+r.error.message,'err'); return; }
+        recovering=false; try{history.replaceState(null,'',location.pathname);}catch(e){}
+        sb.auth.getSession().then(function(s){ if(s.data&&s.data.session)onSignedIn(s.data.session); else { setSignMode('in'); showAuth('Senha alterada! Agora é só entrar.','ok'); } });
+      }).catch(function(){ $('#authBtn').disabled=false; showAuth('Erro de conexão. Tente de novo.','err'); });
+      return;
+    }
+    var email=($('#authEmail').value||'').trim();
     if(!email||!pass){ showAuth('Preencha e-mail e senha.','err'); return; }
     if(pass.length<6){ showAuth('A senha precisa de ao menos 6 caracteres.','err'); return; }
     $('#authBtn').disabled=true; $('#authBtn').textContent='Aguarde…';
@@ -847,10 +879,14 @@
     $('#authBtn').onclick=doAuth;
     $('#authPass').addEventListener('keydown',function(e){if(e.key==='Enter')doAuth();});
     $('#authEmail').addEventListener('keydown',function(e){if(e.key==='Enter')$('#authPass').focus();});
+    if(location.hash.indexOf('type=recovery')>=0) recovering=true;
     sb.auth.getSession().then(function(r){
+      if(recovering){ showAuth(); setSignMode('recover'); return; }
       if(r.data&&r.data.session){ onSignedIn(r.data.session); } else { showAuth(); }
     });
     sb.auth.onAuthStateChange(function(ev,s){
+      if(ev==='PASSWORD_RECOVERY'){ recovering=true; showAuth(); setSignMode('recover'); return; }
+      if(recovering) return;
       if(s&&s.user){ if(!session||session.user.id!==s.user.id) onSignedIn(s); }
       else { onSignedOut(); }
     });
