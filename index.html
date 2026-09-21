@@ -198,8 +198,8 @@
 
   .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:9px 16px;border-radius:22px;z-index:60;opacity:0;transition:.25s;pointer-events:none;box-shadow:var(--shadow);max-width:90vw;text-align:center}
   .toast.show{opacity:1}
-  .modal-bg{position:fixed;inset:0;background:rgba(10,12,10,.4);z-index:50;display:grid;place-items:center;padding:20px}
-  .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:400px;padding:22px;box-shadow:var(--shadow)}
+  .modal-bg{position:fixed;inset:0;background:rgba(10,12,10,.5);z-index:60;display:grid;place-items:center;padding:20px;overflow-y:auto}
+  .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:400px;padding:22px;box-shadow:var(--shadow);max-height:calc(100vh - 40px);overflow-y:auto}
   .modal h3{font-family:var(--serif);font-weight:600;font-size:20px;margin:0 0 16px}
   .modal .field{margin-bottom:14px}
   .modal .field input,.modal .field select{width:100%;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink);border-radius:8px;padding:9px 11px;font-size:14px;font-family:var(--sans);outline:none}
@@ -674,7 +674,7 @@
       (existing?'':'<div class="field"><label '+L+'>Tipo</label><div class="seg" id="seg"><button data-t="book" class="'+(type==='book'?'on':'')+'">📖 Livro</button><button data-t="general" class="'+(type==='general'?'on':'')+'">🗂️ Geral</button></div></div>')+
       '<div class="field"><label '+L+'>Nome</label><input id="f-name" placeholder="'+(type==='book'?'Ex: A Coragem de Ser Imperfeito':'Ex: Ideias soltas')+'" value="'+esc(existing?existing.name:'')+'"></div>'+
       '<div class="field" id="authorField" style="'+(type==='book'?'':'display:none')+'"><label '+L+'>Autor (opcional)</label><input id="f-author" placeholder="Ex: Brené Brown" value="'+esc(existing&&existing.author||'')+'"></div>'+
-      '<div class="field"><label '+L+'>Capa (opcional)</label><div style="display:flex;align-items:flex-start;gap:12px"><div class="cover-pick" id="coverPick">'+(cur.cover?'<img src="'+cur.cover+'">':'<span>+ enviar<br>capa</span>')+'</div><div style="font-size:12px;color:var(--faint);line-height:1.5;padding-top:4px">Toque para escolher uma imagem da capa. Ela é reduzida automaticamente.'+(cur.cover?'<br><button type="button" class="chip" id="coverRemove" style="margin-top:8px">remover</button>':'')+'</div></div><input type="file" id="coverInput" accept="image/*" hidden></div>'+
+      '<div class="field"><label '+L+'>Capa (opcional)</label><div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div class="cover-pick" id="coverPick">'+(cur.cover?'<img src="'+cur.cover+'">':'<span>+ enviar<br>capa</span>')+'</div><div style="font-size:12px;color:var(--faint);line-height:1.5;padding-top:4px">Toque para escolher uma imagem da capa. Ela é reduzida automaticamente.'+(cur.cover?'<br><button type="button" class="chip" id="coverRemove" style="margin-top:8px">remover</button>':'')+'</div></div><input type="file" id="coverInput" accept="image/*" hidden></div>'+
       '<div class="field"><label '+L+'>Ícone (usado se não tiver capa)</label><input id="f-icon" maxlength="2" value="'+esc(existing?existing.icon:(type==='book'?'📖':'🗂️'))+'" style="width:80px"></div>'+
       '<div class="modal-actions"><button class="btn subtle" data-act="close-modal">Cancelar</button><button class="btn" data-act="save-folder" data-id="'+(existing?existing.id:'')+'">Salvar</button></div></div>';
     document.body.appendChild(m);
