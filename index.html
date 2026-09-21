@@ -714,6 +714,7 @@
     var books=sortedFolders().filter(function(f){return f.type==='book';});
     var h='<div class="view-head"><h2><span class="hicon">'+ic('library')+'</span> Biblioteca</h2><span class="n">'+books.length+' livro'+(books.length!==1?'s':'')+'</span></div>';
     h+='<p class="view-sub">Suas leituras em um só lugar. Toque numa capa para abrir as notas do livro.</p>';
+    h+='<div class="filter-bar"><button class="chip" data-act="import-csv">'+ic('down')+' importar CSV</button></div>';
     if(!books.length){h+='<div class="empty"><div class="big">'+ic('library')+'</div><h3>Estante vazia</h3><p>Crie seu primeiro livro e envie a capa para começar a montar sua biblioteca.</p><div style="margin-top:16px"><button class="btn" data-act="new-book">+ novo livro</button></div></div>';return h;}
     h+='<div class="shelf">'+books.map(shelfBook).join('')+'<button class="shelf-book" data-act="new-book"><div class="shelf-cover ph add">＋</div><div class="shelf-title">Novo livro</div></button></div>';
     return h;
@@ -735,6 +736,92 @@
   function p_has(k){return ['menu','search','theme','back','inbox','link','id','menciona','related','refresh','out','down','book','folder','network','library','bulb','brain','bookmark','feather','compass','star','heart','leaf','coffee','globe','flask','pen'].indexOf(k)>=0;}
 
   /* ============ modals ============ */
+  function parseCSV(text){
+    var rows=[],row=[],cur='',q=false,i,c;
+    text=(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    for(i=0;i<text.length;i++){c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+      else { if(c==='"')q=true; else if(c===','){row.push(cur);cur='';} else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';} else cur+=c; }
+    }
+    if(cur.length||row.length){row.push(cur);rows.push(row);}
+    return rows;
+  }
+  function csvKey(h){h=(h||'').trim().toLowerCase();
+    if(/^(livro|book|obra)/.test(h))return 'book';
+    if(/(autor|author)/.test(h))return 'author';
+    if(/(etiqueta|tag)/.test(h))return 'tags';
+    if(/(p[aá]gina|page|local|location|posi)/.test(h))return 'page';
+    if(/(nota|highlight|destaque|trecho|texto|content|trecho|clip)/.test(h))return 'body';
+    if(/(t[ií]tulo|title|assunto)/.test(h))return 'title';
+    return null;
+  }
+  function buildImportPlan(text){
+    var rows=parseCSV(text).filter(function(r){return r.length && r.join('').trim()!=='';});
+    if(rows.length<2)return null;
+    var head=rows[0].map(csvKey);
+    if(head.indexOf('book')<0 && head.indexOf('body')<0) return {error:'Cabeçalho não reconhecido. Use colunas como: livro, nota (e opcionais autor, titulo, etiquetas, pagina).'};
+    var byName={}; folders.forEach(function(f){if(f.type==='book')byName[(f.name||'').toLowerCase()]=f;});
+    var newFolders=[],newNotes=[],skipped=0,used={};
+    for(var r=1;r<rows.length;r++){
+      var o={};for(var c=0;c<rows[r].length;c++){var k=head[c];if(k)o[k]=(rows[r][c]||'').trim();}
+      if(!(o.body||o.title)){skipped++;continue;}
+      var bookName=(o.book||'Importados').trim()||'Importados';var key=bookName.toLowerCase();used[key]=1;
+      var f=byName[key];
+      if(!f){f={id:uidGen('f'),name:bookName,type:'book',icon:'book',author:o.author||'',cover:'',order:folders.length+newFolders.length,createdAt:now()};byName[key]=f;newFolders.push(f);}
+      var body=o.body||'';if(o.page)body+=(body?'\n\n':'')+'— '+o.page;
+      var title=o.title||(body?body.replace(/\n/g,' ').slice(0,70).trim()+(body.length>70?'…':''):'Nota');
+      var tags=o.tags?o.tags.split(/[;|]/).map(function(s){return s.trim().toLowerCase();}).filter(Boolean):[];
+      newNotes.push({id:uidGen('n'),title:title,body:body,folderId:f.id,status:'kept',tags:tags,createdAt:now(),updatedAt:now()});
+    }
+    return {folders:newFolders,notes:newNotes,skipped:skipped,books:Object.keys(used).length};
+  }
+  function runImport(plan){
+    plan.folders.forEach(function(f){folders.push(f);});
+    plan.notes.forEach(function(n){notes.unshift(n);});
+    render();
+    if(sb){
+      var chunk=function(a,n){var o=[];for(var i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o;};
+      var p=Promise.resolve();
+      if(plan.folders.length)p=p.then(function(){return sb.from('folders').upsert(plan.folders.map(toDbFolder));});
+      chunk(plan.notes.map(toDbNote),200).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
+      p.then(function(){toast('Importado ✓ '+plan.notes.length+' notas');}).catch(function(e){toast('Erro ao importar: '+((e&&e.message)||'tente de novo'));});
+    } else { toast('Importado (demo) ✓ '+plan.notes.length+' notas'); }
+  }
+  function openImportModal(){
+    var plan=null;
+    var L='style="font-family:var(--mono);font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px"';
+    var m=document.createElement('div');m.className='modal-bg';m.id='modal';
+    m.innerHTML='<div class="modal"><h3>Importar notas (CSV)</h3>'+
+      '<p style="font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 14px">Envie ou cole um CSV. Colunas: <b>livro, autor, titulo, nota, etiquetas, pagina</b> — só <b>livro</b> e <b>nota</b> são obrigatórias. Cada linha vira uma nota no livro (criado se não existir).</p>'+
+      '<div class="field"><label '+L+'>Arquivo .csv</label><input type="file" id="impFile" accept=".csv,text/csv,text/plain" style="font-size:13px;color:var(--muted)"></div>'+
+      '<div class="field"><label '+L+'>…ou cole o CSV aqui</label><textarea id="impText" spellcheck="false" style="width:100%;min-height:110px;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:10px;font-family:var(--mono);font-size:12px;outline:none" placeholder="livro,autor,titulo,nota,etiquetas,pagina"></textarea></div>'+
+      '<div id="impInfo" style="font-size:13px;color:var(--muted);margin-bottom:10px;min-height:18px;line-height:1.5"></div>'+
+      '<div style="margin-bottom:8px"><button type="button" id="impTemplate" style="border:none;background:none;color:var(--accent-ink);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer">baixar modelo CSV</button></div>'+
+      '<div class="modal-actions"><button class="btn subtle" data-act="imp-close">Cancelar</button><button class="btn" data-act="imp-go">Analisar</button></div></div>';
+    document.body.appendChild(m);document.body.classList.add('modal-open');
+    function close(){document.body.classList.remove('modal-open');m.remove();}
+    m.querySelector('#impFile').addEventListener('change',function(e){var file=e.target.files&&e.target.files[0];if(!file)return;var rd=new FileReader();rd.onload=function(){var t=$('#impText');if(t)t.value=rd.result;plan=null;var b=m.querySelector('[data-act=imp-go]');if(b)b.textContent='Analisar';$('#impInfo').textContent='Arquivo carregado. Toque em Analisar.';};rd.readAsText(file);});
+    m.querySelector('#impTemplate').addEventListener('click',function(){var csv='livro,autor,titulo,nota,etiquetas,pagina\n"Sapiens","Yuval Harari","","Dinheiro é a ficção mais universal: funciona porque todos confiam.","economia;história","p.180"\n"Sapiens","Yuval Harari","","A Revolução Cognitiva criou as ficções compartilhadas.","história","p.34"\n';try{var bl=new Blob([csv],{type:'text/csv;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='modelo-sinapse.csv';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},100);}catch(e){toast('Baixe pelo navegador (aqui no preview não baixa).');}});
+    m.addEventListener('click',function(e){
+      if(e.target===m){close();return;}
+      var act=e.target.closest('[data-act]');if(!act)return;var a=act.getAttribute('data-act');
+      if(a==='imp-close'){close();return;}
+      if(a==='imp-go'){
+        var text=($('#impText').value||'').trim();
+        if(!text){toast('Cole ou envie um CSV.');return;}
+        if(!plan){
+          var res=buildImportPlan(text);
+          if(!res){$('#impInfo').textContent='CSV vazio ou sem linhas de dados.';return;}
+          if(res.error){$('#impInfo').innerHTML='<span style="color:var(--danger)">'+esc(res.error)+'</span>';return;}
+          plan=res;
+          $('#impInfo').innerHTML='Encontrei <b>'+plan.notes.length+' nota(s)</b> em <b>'+plan.books+' livro(s)</b>'+(plan.folders.length?' — '+plan.folders.length+' livro(s) novo(s)':'')+(plan.skipped?' · '+plan.skipped+' linha(s) ignorada(s)':'')+'. Confira e confirme.';
+          act.textContent='Importar '+plan.notes.length+' nota(s)';
+          return;
+        }
+        var pl=plan;close();runImport(pl);view={name:'library',folderId:view.folderId,noteId:null,tag:null,q:''};render();
+      }
+    });
+  }
   function openFolderModal(kind,existing){
     var type=existing?existing.type:(kind==='book'?'book':'general');
     var L='style="font-family:var(--mono);font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px"';
@@ -810,6 +897,7 @@
         case 'save':doSave();break;
         case 'del-note':if(confirm('Excluir esta nota? Não dá pra desfazer.')){removeNote(id);editing=false;view.name=view.q?'search':'folder';view.noteId=null;render();toast('Nota excluída.');}break;
         case 'new-book':openFolderModal('book');break;
+        case 'import-csv':openImportModal();break;
         case 'new-folder':openFolderModal('general');break;
         case 'edit-folder':openFolderModal(null,folderById(id));break;
         case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);view={name:'folder',folderId:'inbox',noteId:null,tag:null,q:''};render();toast('Pasta excluída.');}break;
