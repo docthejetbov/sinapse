@@ -363,7 +363,25 @@
   function allTags(){var map={};notes.forEach(function(n){(n.tags||[]).forEach(function(t){map[t]=(map[t]||0)+1;});});return Object.keys(map).map(function(t){return {tag:t,count:map[t]};}).sort(function(a,b){return b.count-a.count||a.tag.localeCompare(b.tag);});}
   function linkCount(){var c=0;notes.forEach(function(n){c+=outgoing(n).length;});return c;}
   var STOP=' a o as os um uma uns umas de do da dos das em no na nos nas por para com sem sob sobre ao aos e ou mas que se como quando onde qual quais quem cujo the of to and in is it its this that these those você seu sua seus suas para mais menos muito pouco também já não sim isso isto esse essa este esta aquilo '.split(' ');
-  function suggestTags(text){var t=plain(text).toLowerCase();if(!t||t.length<12)return [];var words=t.split(/[^a-zà-ú0-9]+/),freq={};words.forEach(function(w){if(w.length>4&&w.length<24&&!/\d/.test(w)&&STOP.indexOf(w)<0)freq[w]=(freq[w]||0)+1;});return Object.keys(freq).sort(function(a,b){return freq[b]-freq[a]||a.localeCompare(b);}).slice(0,5);}
+  function autoTags(text,max){
+    max=max||3;
+    var base=plain(text||'').toLowerCase();
+    var toks=base.split(/[^a-zà-ú0-9]+/).filter(function(w){return w.length>3&&w.length<26&&STOP.indexOf(w)<0&&!/^\d+$/.test(w);});
+    if(toks.length<3)return [];
+    var tf={};toks.forEach(function(w){tf[w]=(tf[w]||0)+1;});
+    var bg={};for(var i=0;i<toks.length-1;i++){var b=toks[i]+' '+toks[i+1];bg[b]=(bg[b]||0)+1;}
+    var corpus=notes.map(function(n){return plain((n.title||'')+' '+(n.body||'')).toLowerCase();});
+    var N=Math.max(1,corpus.length);
+    function df(term){var c=0;for(var j=0;j<corpus.length;j++){if(corpus[j].indexOf(term)>=0)c++;}return c;}
+    var scored=[];
+    Object.keys(tf).forEach(function(w){var idf=Math.log((N+1)/(1+df(w)))+1;scored.push({t:w,s:tf[w]*idf});});
+    Object.keys(bg).forEach(function(b){var p=b.split(' ');if(p[0]===p[1])return;var idf=Math.log((N+1)/(1+df(b)))+1;scored.push({t:b,s:bg[b]*idf*1.7});});
+    scored.sort(function(a,b){return b.s-a.s||a.t.localeCompare(b.t);});
+    var out=[];
+    for(var k=0;k<scored.length&&out.length<max;k++){var t=scored[k].t;if(out.some(function(o){return o.indexOf(t)>=0||t.indexOf(o)>=0;}))continue;out.push(t);}
+    return out;
+  }
+  function suggestTags(text){return autoTags(text,5);}
 
   /* ============ Supabase storage ============ */
   function fromDbNote(r){return {id:r.id,title:r.title,body:r.body,folderId:r.folder_id,status:r.status,tags:r.tags||[],createdAt:Number(r.created_at)||0,updatedAt:Number(r.updated_at)||0};}
@@ -920,15 +938,16 @@
     var body=lines.length>1?lines.slice(1).join('\n').trim():'';
     if(!title)title='Sem título';
     var dest=folderById(destId)||folderById('inbox');
-    var n={id:uidGen('n'),title:title||'Sem título',body:body,folderId:dest?dest.id:'inbox',status:dest&&dest.type!=='inbox'?'kept':'inbox',tags:[],createdAt:now(),updatedAt:now()};
-    saveNote(n);if(cap)cap.value='';render();toast('Capturado na nuvem ✓');
+    var n={id:uidGen('n'),title:title||'Sem título',body:body,folderId:dest?dest.id:'inbox',status:dest&&dest.type!=='inbox'?'kept':'inbox',tags:autoTags((title||'')+' '+body,3),createdAt:now(),updatedAt:now()};
+    saveNote(n);if(cap)cap.value='';render();toast(savedMsg('Capturado')+(n.tags.length?' · '+n.tags.length+' etiquetas':''));
   }
   function doSave(){
     var n=noteById(view.noteId);if(!n)return;var t=$('#e-title'),b=$('#e-body'),fo=$('#e-folder'),tg=$('#e-tags');
     n.title=(t?t.value:n.title).trim()||'Sem título';n.body=b?b.value:n.body;
     if(fo){var nf=fo.value;if(nf!==n.folderId){n.folderId=nf;var ff=folderById(nf);if(ff&&ff.type!=='inbox')n.status='kept';}}
     if(tg)n.tags=tg.value.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean).filter(function(v,i,arr){return arr.indexOf(v)===i;});
-    saveNote(n);editing=false;render();toast('Salvo na nuvem ✓');
+    if(!n.tags||!n.tags.length)n.tags=autoTags((n.title||'')+' '+(n.body||''),3);
+    saveNote(n);editing=false;render();toast(savedMsg('Salvo'));
   }
   function openWikilink(title){
     var n=noteByTitle(title);
