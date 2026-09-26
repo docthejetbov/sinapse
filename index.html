@@ -462,6 +462,18 @@
   /* Ponte com o app: devolve etiquetas sem "#" (o app já prefixa) */
   function autoTags(text,max){return HT.generate(text,{maxHashtags:max||5,minHashtags:1}).hashtags.map(function(h){return h.replace(/^#/,'');});}
   function suggestTags(text){return autoTags(text,5);}
+  function regenAllTags(){
+    if(!notes.length){toast('Nenhuma nota para processar.');return;}
+    var n0=notes.length;
+    notes.forEach(function(n){n.tags=autoTags(noteText(n),4);});
+    render();
+    if(sb){
+      var chunk=function(a,s){var o=[];for(var i=0;i<a.length;i+=s)o.push(a.slice(i,i+s));return o;};
+      var p=Promise.resolve();
+      chunk(notes.map(toDbNote),150).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
+      p.then(function(){toast('Etiquetas regeneradas ✓ '+n0+' notas');}).catch(function(e){toast('Erro ao salvar: '+((e&&e.message)||'tente de novo'));});
+    } else { toast('Regenerado (demo) ✓ '+n0+' notas'); }
+  }
 
   /* ============ Supabase storage ============ */
   function fromDbNote(r){return {id:r.id,title:r.title,body:r.body,folderId:r.folder_id,status:r.status,tags:r.tags||[],createdAt:Number(r.created_at)||0,updatedAt:Number(r.updated_at)||0};}
@@ -766,7 +778,21 @@
     var q=view.q.trim().toLowerCase();
     var h='<div class="searchbox">'+ic('search')+'<input id="sq" placeholder="Puxar um assunto que você já leu..." value="'+esc(view.q)+'" autocomplete="off"></div>';
     var tags=allTags();
-    if(tags.length)h+='<div class="filter-bar">'+tags.slice(0,14).map(function(t){return '<button class="chip'+(view.tag===t.tag?' on':'')+'" data-act="ftag" data-tag="'+esc(t.tag)+'">#'+esc(t.tag)+' '+t.count+'</button>';}).join('')+'</div>';
+    if(tags.length){
+      var strong=tags.filter(function(t){return t.count>=2;});
+      var tf=(view.tagFilter||'').toLowerCase();
+      var pool = view.showAllTags? tags.slice() : (strong.length? strong : tags.slice(0,10));
+      if(view.showAllTags && tf) pool=pool.filter(function(t){return t.tag.toLowerCase().indexOf(tf)>=0;});
+      if(!view.showAllTags) pool=pool.slice(0,16);
+      h+='<div style="margin-bottom:6px"><div class="conn-h" style="margin-bottom:8px;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:7px">'+ic('related')+' Filtrar por etiqueta</span><button data-act="regen-tags" title="Regerar todas as etiquetas com o motor novo" style="border:none;background:none;color:var(--accent);font:inherit;font-size:11px;cursor:pointer;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:5px">'+ic('refresh')+' regerar</button></div>';
+      if(view.showAllTags) h+='<div class="searchbox" style="margin-bottom:10px;padding:8px 12px"><input id="tf" placeholder="filtrar etiquetas…" value="'+esc(view.tagFilter||'')+'" autocomplete="off" style="font-size:14px"></div>';
+      h+='<div class="filter-bar">';
+      if(view.tag)h+='<button class="chip on" data-act="ftag" data-tag="'+esc(view.tag)+'">#'+esc(view.tag)+' ✕</button>';
+      h+=pool.map(function(t){return view.tag===t.tag?'':'<button class="chip" data-act="ftag" data-tag="'+esc(t.tag)+'">#'+esc(t.tag)+' <span style="opacity:.55">'+t.count+'</span></button>';}).join('');
+      if(!view.showAllTags && tags.length>pool.length) h+='<button class="chip" data-act="more-tags" style="color:var(--accent);border-style:dashed">+ '+(tags.length-pool.length)+' etiquetas</button>';
+      if(view.showAllTags) h+='<button class="chip" data-act="less-tags" style="color:var(--muted)">▲ recolher</button>';
+      h+='</div></div>';
+    }
     var res=notes.slice();
     if(view.tag)res=res.filter(function(n){return (n.tags||[]).indexOf(view.tag)>=0;});
     if(q){
@@ -973,6 +999,8 @@
     if(cap){var g=function(){cap.style.height='auto';cap.style.height=Math.max(52,cap.scrollHeight)+'px';};cap.addEventListener('input',g);cap.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();doCapture(currentDest());}});}
     var sq=$('#sq');
     if(sq){sq.focus();if(sq.value)sq.setSelectionRange(sq.value.length,sq.value.length);sq.addEventListener('input',function(){view.q=sq.value;var mi=$('.main-inner');mi.innerHTML=syncPill()+searchView();wire();});}
+    var tfEl=$('#tf');
+    if(tfEl){tfEl.addEventListener('input',function(){view.tagFilter=tfEl.value;var mi=$('.main-inner');mi.innerHTML=syncPill()+searchView();wire();var t2=$('#tf');if(t2){t2.focus();t2.setSelectionRange(t2.value.length,t2.value.length);}});}
     app.onclick=function(e){
       var link=e.target.closest('a.wl');if(link){e.preventDefault();openWikilink(link.getAttribute('data-link'));return;}
       var el=e.target.closest('[data-act]');if(!el)return;var a=el.getAttribute('data-act'),id=el.getAttribute('data-id'),tag=el.getAttribute('data-tag');
@@ -999,7 +1027,11 @@
         case 'new-folder':openFolderModal('general');break;
         case 'edit-folder':openFolderModal(null,folderById(id));break;
         case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);view={name:'folder',folderId:'inbox',noteId:null,tag:null,q:''};render();toast('Pasta excluída.');}break;
-        case 'tag':case 'ftag':view={name:'search',folderId:view.folderId,noteId:null,tag:tag,q:''};closeRail();render();break;
+        case 'tag':view={name:'search',folderId:view.folderId,noteId:null,tag:tag,q:'',showAllTags:false,tagFilter:''};closeRail();render();break;
+        case 'ftag':view.name='search';view.noteId=null;view.tag=(view.tag===tag?null:tag);render();break;
+        case 'regen-tags':if(confirm('Regerar as etiquetas de TODAS as notas com o motor novo? Isso substitui as etiquetas atuais.')){regenAllTags();}break;
+        case 'more-tags':view.showAllTags=true;render();break;
+        case 'less-tags':view.showAllTags=false;view.tagFilter='';render();break;
         case 'add-tag':var ti=$('#e-tags');if(ti){var curr=ti.value.split(',').map(function(s){return s.trim();}).filter(Boolean);if(curr.indexOf(tag)<0)curr.push(tag);ti.value=curr.join(', ');el.style.display='none';}break;
         case 'import':importSeed();break;
         case 'dismiss-import':try{localStorage.setItem('sinapse_imported','1');}catch(e){}render();break;
