@@ -342,6 +342,7 @@
   var notes=[], folders=[], booted=false;
   var view={name:'folder', folderId:'inbox', noteId:null, tag:null, q:''};
   var editing=false, conn='connecting'; // connecting | ok | off
+  var routed=false;
   var signMode='in';
 
   /* voice */
@@ -505,7 +506,7 @@
       notes=(ne.data||[]).map(fromDbNote);
       conn='ok';
       ensureDefaults();
-      render();
+      if(!routed){ routed=true; applyInitialRoute(); } else { render(); }
       if(cb)cb();
     }).catch(function(e){ conn='off'; render(); if(cb)cb(e); });
   }
@@ -660,6 +661,53 @@
   function startMic(){if(!ensureRecog()){showVoiceHelp('Este navegador não tem ditado próprio. Use o 🎤 do teclado.');return;}var box=$('#cap');capBase=box&&box.value.trim()?box.value.trim():'';wantListening=true;micStarted=false;setMicUI(true);try{recog.start();requestWake();}catch(e){wantListening=false;setMicUI(false);showVoiceHelp('Não consegui abrir o microfone. Use o 🎤 do teclado.');return;}clearTimeout(micStartTimer);micStartTimer=setTimeout(function(){if(wantListening&&!micStarted){wantListening=false;try{recog.stop();}catch(e){}setMicUI(false);releaseWake();showVoiceHelp('O microfone não abriu. Toque no campo e use o 🎤 do teclado.');}},2500);}
   function toggleMic(){if(wantListening){wantListening=false;try{recog.stop();}catch(e){}}else startMic();}
   function abortMic(){if(wantListening){wantListening=false;try{recog.stop();}catch(e){}}capBase='';releaseWake();setMicUI(false);}
+
+  /* ============ ROTEAMENTO (histórico + links profundos) ============ */
+  function viewToHash(v){
+    if(!v)return '#/';
+    switch(v.name){
+      case 'note': return '#/n/'+(v.noteId||'');
+      case 'library': return '#/livros';
+      case 'rede': return '#/rede';
+      case 'search': return '#/busca'+(v.tag?'/t/'+encodeURIComponent(v.tag):'');
+      default: return '#/f/'+(v.folderId||'inbox');
+    }
+  }
+  function hashToView(h){
+    h=(h||'').replace(/^#\/?/,'');
+    var p=h.split('/');
+    if(p[0]==='n'&&p[1]){var n=noteById(p[1]);if(n)return {name:'note',folderId:n.folderId,noteId:n.id,tag:null,q:''};}
+    if(p[0]==='livros')return {name:'library',folderId:'inbox',noteId:null,tag:null,q:''};
+    if(p[0]==='rede')return {name:'rede',folderId:'inbox',noteId:null,tag:null,q:''};
+    if(p[0]==='busca')return {name:'search',folderId:'inbox',noteId:null,tag:(p[1]==='t'&&p[2]?decodeURIComponent(p[2]):null),q:'',showAllTags:false,tagFilter:''};
+    if(p[0]==='f'&&p[1]&&folderById(p[1]))return {name:'folder',folderId:p[1],noteId:null,tag:null,q:''};
+    return {name:'folder',folderId:'inbox',noteId:null,tag:null,q:''};
+  }
+  function normalizeView(v){
+    v=v||{name:'folder',folderId:'inbox',noteId:null,tag:null,q:''};
+    if(v.name==='note'&&!noteById(v.noteId))return {name:'folder',folderId:folderById(v.folderId)?v.folderId:'inbox',noteId:null,tag:null,q:''};
+    if(v.name==='folder'&&!folderById(v.folderId))v.folderId='inbox';
+    return v;
+  }
+  function go(v,opt){
+    opt=opt||{};view=v;
+    try{ if(opt.replace)history.replaceState({v:v},'',viewToHash(v)); else history.pushState({v:v},'',viewToHash(v)); }catch(e){}
+    render();
+  }
+  function applyInitialRoute(){
+    var v=normalizeView(hashToView(location.hash));
+    if(v.name==='note'){
+      var base={name:'folder',folderId:folderById(v.folderId)?v.folderId:'inbox',noteId:null,tag:null,q:''};
+      view=base;try{history.replaceState({v:base},'',viewToHash(base));}catch(e){}
+      go(v);
+    } else { go(v,{replace:true}); }
+  }
+  window.addEventListener('popstate',function(e){
+    if(!session)return;
+    editing=false;abortMic();
+    view=normalizeView((e.state&&e.state.v)||hashToView(location.hash));
+    render();window.scrollTo(0,0);
+  });
 
   /* ============ RENDER ============ */
   var app=$('#app');
@@ -953,7 +1001,7 @@
           act.textContent='Importar '+plan.notes.length+' nota(s)';
           return;
         }
-        var pl=plan;close();runImport(pl);view={name:'library',folderId:view.folderId,noteId:null,tag:null,q:''};render();
+        var pl=plan;close();runImport(pl);go({name:'library',folderId:view.folderId,noteId:null,tag:null,q:''});
       }
     });
   }
@@ -998,7 +1046,7 @@
         if(!editId){var dup=folders.some(function(x){return (x.name||'').trim().toLowerCase()===name.toLowerCase()&&x.type===t;});if(dup&&!confirm('Já existe uma pasta "'+name+'". Criar assim mesmo?'))return;}
         var id=editId||uidGen('f');
         var f={id:id,name:name,type:t,icon:cur.icon||'folder',author:t==='book'&&$('#f-author')?$('#f-author').value.trim():'',cover:cur.cover||'',order:existing?existing.order:folders.length,createdAt:existing?existing.createdAt:now()};
-        saveFolder(f);close();view={name:'folder',folderId:id,noteId:null,tag:null,q:''};render();toast('Pasta salva na nuvem ✓');
+        saveFolder(f);close();go({name:'folder',folderId:id,noteId:null,tag:null,q:''});toast('Pasta salva na nuvem ✓');
       }
     });
     setTimeout(function(){var el=$('#f-name');if(el)el.focus();},50);
@@ -1018,27 +1066,27 @@
       if(['folder','rede','go-search','open','back','edit','del-folder','new-book','new-folder','signout','library'].indexOf(a)>=0)abortMic();
       switch(a){
         case 'menu':var r=$('#rail');if(r)r.classList.toggle('open');break;
-        case 'library':editing=false;view={name:'library',folderId:view.folderId,noteId:null,tag:null,q:''};closeRail();render();break;
+        case 'library':editing=false;closeRail();go({name:'library',folderId:view.folderId,noteId:null,tag:null,q:''});break;
         case 'theme':toggleTheme();break;
         case 'recheck':toast('Atualizando…');loadAll(function(){toast('Atualizado ✓');});break;
         case 'signout':if(confirm('Sair da sua conta neste aparelho?')){sb.auth.signOut();}break;
-        case 'folder':editing=false;view={name:'folder',folderId:id,noteId:null,tag:null,q:''};closeRail();render();break;
-        case 'rede':editing=false;view={name:'rede',folderId:view.folderId,noteId:null,tag:null,q:''};closeRail();render();break;
-        case 'go-search':editing=false;view={name:'search',folderId:view.folderId,noteId:null,tag:null,q:view.q};closeRail();render();break;
-        case 'open':editing=false;view={name:'note',folderId:view.folderId,noteId:id,tag:null,q:view.q};render();window.scrollTo(0,0);break;
-        case 'back':editing=false;view.name=view.q?'search':'folder';view.noteId=null;render();break;
+        case 'folder':editing=false;closeRail();go({name:'folder',folderId:id,noteId:null,tag:null,q:''});break;
+        case 'rede':editing=false;closeRail();go({name:'rede',folderId:view.folderId,noteId:null,tag:null,q:''});break;
+        case 'go-search':editing=false;closeRail();go({name:'search',folderId:view.folderId,noteId:null,tag:null,q:view.q});break;
+        case 'open':editing=false;go({name:'note',folderId:view.folderId,noteId:id,tag:null,q:view.q});window.scrollTo(0,0);break;
+        case 'back':editing=false;history.back();break;
         case 'capture':doCapture(el.getAttribute('data-dest'));break;
         case 'mic':toggleMic();break;
         case 'toggle-auto':autoVoice=!autoVoice;try{localStorage.setItem('sinapse_autovoice',autoVoice?'1':'0');}catch(e){}el.classList.toggle('on',autoVoice);break;
         case 'edit':editing=true;render();setTimeout(function(){var b=$('#e-body');if(b){b.style.height=b.scrollHeight+'px';}},30);break;
         case 'save':doSave();break;
-        case 'del-note':if(confirm('Excluir esta nota? Não dá pra desfazer.')){removeNote(id);editing=false;view.name=view.q?'search':'folder';view.noteId=null;render();toast('Nota excluída.');}break;
+        case 'del-note':if(confirm('Excluir esta nota? Não dá pra desfazer.')){removeNote(id);editing=false;go({name:view.q?'search':'folder',folderId:view.folderId,noteId:null,tag:null,q:view.q},{replace:true});toast('Nota excluída.');}break;
         case 'new-book':openFolderModal('book');break;
         case 'import-csv':openImportModal();break;
         case 'new-folder':openFolderModal('general');break;
         case 'edit-folder':openFolderModal(null,folderById(id));break;
-        case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);view={name:'folder',folderId:'inbox',noteId:null,tag:null,q:''};render();toast('Pasta excluída.');}break;
-        case 'tag':view={name:'search',folderId:view.folderId,noteId:null,tag:tag,q:'',showAllTags:false,tagFilter:''};closeRail();render();break;
+        case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''},{replace:true});toast('Pasta excluída.');}break;
+        case 'tag':closeRail();go({name:'search',folderId:view.folderId,noteId:null,tag:tag,q:'',showAllTags:false,tagFilter:''});break;
         case 'ftag':view.name='search';view.noteId=null;view.tag=(view.tag===tag?null:tag);render();break;
         case 'regen-tags':if(confirm('Regerar as etiquetas de TODAS as notas com o motor novo? Isso substitui as etiquetas atuais.')){regenAllTags();}break;
         case 'more-tags':view.showAllTags=true;render();break;
@@ -1071,8 +1119,8 @@
   }
   function openWikilink(title){
     var n=noteByTitle(title);
-    if(n){editing=false;view={name:'note',folderId:view.folderId,noteId:n.id,tag:null,q:''};render();window.scrollTo(0,0);}
-    else if(confirm('A nota "'+title+'" não existe. Criar agora?')){var cur=noteById(view.noteId);var nn={id:uidGen('n'),title:title,body:'',folderId:cur?cur.folderId:'inbox',status:'inbox',tags:[],createdAt:now(),updatedAt:now()};saveNote(nn);editing=true;view={name:'note',folderId:view.folderId,noteId:nn.id,tag:null,q:''};render();}
+    if(n){editing=false;go({name:'note',folderId:view.folderId,noteId:n.id,tag:null,q:''});window.scrollTo(0,0);}
+    else if(confirm('A nota "'+title+'" não existe. Criar agora?')){var cur=noteById(view.noteId);var nn={id:uidGen('n'),title:title,body:'',folderId:cur?cur.folderId:'inbox',status:'inbox',tags:[],createdAt:now(),updatedAt:now()};saveNote(nn);editing=true;go({name:'note',folderId:view.folderId,noteId:nn.id,tag:null,q:''});}
   }
   function toggleTheme(){var cur=document.documentElement.getAttribute('data-theme');var next=cur==='dark'?'light':cur==='light'?'dark':(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',next);try{localStorage.setItem('sinapse_theme',next);}catch(e){}render();}
 
@@ -1099,7 +1147,7 @@
 
   /* ============ boot ============ */
   function boot(){
-    if(DEMO){ session={user:{id:'demo'}}; uid='demo'; conn='ok'; hideAuth(); seedDemo(); view={name:'folder',folderId:'b1',noteId:null,tag:null,q:''}; render(); return; }
+    if(DEMO){ session={user:{id:'demo'}}; uid='demo'; conn='ok'; hideAuth(); seedDemo(); routed=true; view={name:'folder',folderId:'b1',noteId:null,tag:null,q:''}; go(view,{replace:true}); return; }
     if(!window.supabase||!window.supabase.createClient){ document.body.innerHTML='<div style="padding:40px;text-align:center;font-family:sans-serif">Falha ao carregar a biblioteca. Verifique sua conexão e recarregue.</div>'; return; }
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
     setSignMode('in');
