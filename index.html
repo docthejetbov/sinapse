@@ -39,7 +39,8 @@
   #app{height:100%;display:flex;flex-direction:column}
 
   .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:14px 20px}
-  .brand{display:flex;align-items:center;gap:7px;min-width:0}
+  .brand{display:flex;align-items:center;gap:7px;min-width:0;cursor:pointer;border-radius:10px;transition:opacity .12s}
+  .brand:hover{opacity:.78}
   .glyph{width:34px;height:34px;flex:none}
   .brand h1{font-family:'Caveat',cursive;font-weight:700;font-size:29px;margin:0;letter-spacing:.5px;line-height:.95;color:#2B2838}
   .brand small{display:block;font-size:11px;color:var(--muted);letter-spacing:.02em;margin-top:2px}
@@ -720,7 +721,7 @@
   function topbar(){
     var sc=conn==='ok'?{c:'ok',t:'ATUALIZADO'}:conn==='off'?{c:'off',t:'erro'}:{c:'wait',t:'conectando'};
     return '<div class="topbar">'+
-      '<div class="brand">'+iconGlyph()+'<div><h1>Sinapse</h1><small>segundo cérebro conectado</small></div></div>'+
+      '<div class="brand" data-act="home" role="button" tabindex="0" title="Início">'+iconGlyph()+'<div><h1>Sinapse</h1><small>segundo cérebro conectado</small></div></div>'+
       '<div class="top-actions">'+
         '<button class="sync-dot '+sc.c+'" data-act="recheck" title="Atualizar">'+(conn==='ok'?ic('check'):'<i></i>')+'<span>'+sc.t+'</span></button>'+
         '<button class="icon-btn" data-act="go-search" title="Buscar">'+ic('search')+'</button>'+
@@ -1063,9 +1064,10 @@
     app.onclick=function(e){
       var link=e.target.closest('a.wl');if(link){e.preventDefault();openWikilink(link.getAttribute('data-link'));return;}
       var el=e.target.closest('[data-act]');if(!el)return;var a=el.getAttribute('data-act'),id=el.getAttribute('data-id'),tag=el.getAttribute('data-tag');
-      if(['folder','rede','go-search','open','back','edit','del-folder','new-book','new-folder','signout','library'].indexOf(a)>=0)abortMic();
+      if(['home','folder','rede','go-search','open','back','edit','del-folder','new-book','new-folder','signout','library'].indexOf(a)>=0)abortMic();
       switch(a){
         case 'menu':var r=$('#rail');if(r)r.classList.toggle('open');break;
+        case 'home':editing=false;closeRail();go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''});window.scrollTo(0,0);break;
         case 'library':editing=false;closeRail();go({name:'library',folderId:view.folderId,noteId:null,tag:null,q:''});break;
         case 'theme':toggleTheme();break;
         case 'recheck':toast('Atualizando…');loadAll(function(){toast('Atualizado ✓');});break;
