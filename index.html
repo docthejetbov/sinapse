@@ -9,7 +9,8 @@
 <title>Sinapse</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cline x1='14' y1='15' x2='25' y2='26' stroke='%23C7C2F5' stroke-width='2'/%3E%3Cline x1='38' y1='12' x2='25' y2='26' stroke='%23C7C2F5' stroke-width='2'/%3E%3Cline x1='37' y1='38' x2='25' y2='26' stroke='%23C7C2F5' stroke-width='2'/%3E%3Cline x1='14' y1='37' x2='25' y2='26' stroke='%23C7C2F5' stroke-width='2'/%3E%3Ccircle cx='25' cy='26' r='7' fill='%237367F0'/%3E%3Ccircle cx='14' cy='15' r='4' fill='%237367F0'/%3E%3Ccircle cx='38' cy='12' r='3.4' fill='%23FF9F43'/%3E%3Ccircle cx='37' cy='38' r='4' fill='%237367F0'/%3E%3Ccircle cx='14' cy='37' r='3.4' fill='%2328C76F'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Caveat:wght@700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
     --bg:#F8F7FA;
@@ -38,9 +39,9 @@
   #app{height:100%;display:flex;flex-direction:column}
 
   .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:14px 20px}
-  .brand{display:flex;align-items:center;gap:10px;min-width:0}
-  .glyph{width:30px;height:30px;flex:none}
-  .brand h1{font-family:var(--serif);font-weight:800;font-size:20px;margin:0;letter-spacing:-.01em;line-height:1}
+  .brand{display:flex;align-items:center;gap:7px;min-width:0}
+  .glyph{width:34px;height:34px;flex:none}
+  .brand h1{font-family:'Caveat',cursive;font-weight:700;font-size:29px;margin:0;letter-spacing:.5px;line-height:.95;color:#2B2838}
   .brand small{display:block;font-size:11px;color:var(--muted);letter-spacing:.02em;margin-top:2px}
   .top-actions{margin-left:auto;display:flex;align-items:center;gap:6px}
   .icon-btn{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);border-radius:var(--pill);color:var(--muted);transition:.15s}
@@ -275,7 +276,7 @@
   .auth{position:fixed;inset:0;z-index:80;background:var(--grad);display:grid;place-items:center;padding:20px}
   .auth-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 26px}
   .auth-card .glyph{width:40px;height:40px;margin-bottom:14px}
-  .auth-card h2{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 4px;letter-spacing:-.02em}
+  .auth-card h2{font-family:'Caveat',cursive;font-weight:700;font-size:34px;margin:6px 0 4px;letter-spacing:.5px;color:#2B2838}
   .auth-card p.sub{color:var(--muted);font-size:13.5px;margin:0 0 20px}
   .auth-card label{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:5px}
   .auth-card input{width:100%;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink);border-radius:9px;padding:11px 12px;font-size:15px;font-family:var(--sans);outline:none;margin-bottom:14px}
@@ -291,7 +292,7 @@
 <body>
 <div class="auth" id="auth" hidden>
   <div class="auth-card">
-    <svg class="glyph" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="9" r="3" fill="var(--accent)"/><circle cx="23" cy="7" r="2.3" fill="var(--gold)"/><circle cx="25" cy="21" r="3" fill="var(--accent)"/><circle cx="11" cy="24" r="2.3" fill="var(--accent-ink)"/><circle cx="16" cy="15" r="2" fill="var(--muted)"/><path d="M8 9L16 15M16 15L25 21M16 15L23 7M16 15L11 24M23 7L25 21" stroke="var(--line-strong)" stroke-width="1.3"/></svg>
+    <svg class="glyph" viewBox="0 0 50 50" style="width:44px;height:44px" xmlns="http://www.w3.org/2000/svg"><line x1="14" y1="15" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="38" y1="12" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="37" y1="38" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="14" y1="37" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><circle cx="25" cy="26" r="7" fill="#7367F0"/><circle cx="14" cy="15" r="4" fill="#7367F0"/><circle cx="38" cy="12" r="3.4" fill="#FF9F43"/><circle cx="37" cy="38" r="4" fill="#7367F0"/><circle cx="14" cy="37" r="3.4" fill="#28C76F"/></svg>
     <h2>Sinapse</h2>
     <p class="sub" id="authSub">Seu segundo cérebro. Entre para acessar suas notas em qualquer aparelho.</p>
     <div class="auth-msg" id="authMsg" hidden></div>
@@ -657,7 +658,7 @@
     var html=topbar()+folderStrip()+'<div class="shell">'+rail()+'<div class="main"><div class="main-inner">'+mainView()+'</div></div></div>';
     app.innerHTML=html; wire();
   }
-  function iconGlyph(){return '<svg class="glyph" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="9" r="3" fill="var(--accent)"/><circle cx="23" cy="7" r="2.3" fill="var(--gold)"/><circle cx="25" cy="21" r="3" fill="var(--accent)"/><circle cx="11" cy="24" r="2.3" fill="var(--accent-ink)"/><circle cx="16" cy="15" r="2" fill="var(--muted)"/><path d="M8 9L16 15M16 15L25 21M16 15L23 7M16 15L11 24M23 7L25 21" stroke="var(--line-strong)" stroke-width="1.3"/></svg>';}
+  function iconGlyph(){return '<svg class="glyph" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><line x1="14" y1="15" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="38" y1="12" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="37" y1="38" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="14" y1="37" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><circle cx="25" cy="26" r="7" fill="#7367F0"/><circle cx="14" cy="15" r="4" fill="#7367F0"/><circle cx="38" cy="12" r="3.4" fill="#FF9F43"/><circle cx="37" cy="38" r="4" fill="#7367F0"/><circle cx="14" cy="37" r="3.4" fill="#28C76F"/></svg>';}
   function topbar(){
     var sc=conn==='ok'?{c:'ok',t:'ATUALIZADO'}:conn==='off'?{c:'off',t:'erro'}:{c:'wait',t:'conectando'};
     return '<div class="topbar">'+
