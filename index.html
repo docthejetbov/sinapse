@@ -120,6 +120,16 @@
   .btn.danger{background:none;border-color:transparent;color:var(--danger)}
   .btn.danger:hover{background:color-mix(in srgb,var(--danger) 12%,transparent)}
 
+  .folder-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 6px}
+  .fbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;padding:8px 15px;border-radius:var(--pill);transition:.14s}
+  .fbtn svg{width:16px;height:16px;color:var(--muted);transition:.14s}
+  .fbtn:hover{border-color:var(--accent);color:var(--accent-ink);box-shadow:0 3px 10px rgba(115,103,240,.12)}
+  .fbtn:hover svg{color:var(--accent)}
+  .fbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .fbtn.primary svg{color:#fff}
+  .fbtn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+  .fbtn.danger:hover{border-color:var(--danger);color:var(--danger);box-shadow:none}
+  .fbtn.danger:hover svg{color:var(--danger)}
   .view-head{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
   .view-head h2{font-family:var(--serif);font-weight:800;font-size:26px;margin:0;letter-spacing:-.02em}
   .view-head .n{font-family:var(--mono);font-size:12px;color:var(--faint)}
@@ -432,14 +442,16 @@
     gram:{}, generic:{}, verbs:{}, blacklist:{},
     connectors:{de:1,da:1,do:1,das:1,dos:1,e:1,no:1,na:1,nos:1,nas:1,em:1},
     verbNoun:{controlar:'controle',analisar:'analise',monitorar:'monitoramento',acompanhar:'monitoramento',aumentar:'aumento',melhorar:'aumento',reduzir:'reducao',gerir:'gestao',gerenciar:'gestao',otimizar:'otimizacao',planejar:'planejamento',medir:'medicao'},
-    acronyms:{gmd:'GMD',ia:'IA',pnib:'PNIB',roi:'ROI',kpi:'KPI',cpa:'CPA',crm:'CRM',pib:'PIB'},
-    preferred:{'pecuaria de corte':'PecuariaDeCorte','ganho medio diario':'GanhoMedioDiario','inteligencia artificial':'InteligenciaArtificial','rotacao de piquetes':'RotacaoDePiquetes','gestao de rebanho':'GestaoDeRebanho','desempenho animal':'DesempenhoAnimal','gestao de lotes':'GestaoDeLotes','controle de estoque':'ControleDeEstoque','saude animal':'SaudeAnimal','gestao de pastagens':'GestaoDePastagens','dados de pesagem':'DadosDePesagem','segundo cerebro':'SegundoCerebro'},
+    acronyms:{gmd:'GMD',ia:'IA',pnib:'PNIB',roi:'ROI',kpi:'KPI',cpa:'CPA',crm:'CRM',pib:'PIB',plg:'PLG',mql:'MQL',sql:'SQL',arpu:'ARPU',cac:'CAC',acv:'ACV',mrr:'MRR',arr:'ARR',tam:'TAM',moat:'MOAT',saas:'SaaS',b2b:'B2B',b2c:'B2C',mvp:'MVP',okr:'OKR',sla:'SLA',nps:'NPS',ltv:'LTV',ceo:'CEO',cto:'CTO',gtm:'GTM',seo:'SEO',api:'API',ux:'UX',ui:'UI'},
+    preferred:{'pecuaria de corte':'PecuariaDeCorte','ganho medio diario':'GanhoMedioDiario','inteligencia artificial':'InteligenciaArtificial','rotacao de piquetes':'RotacaoDePiquetes','gestao de rebanho':'GestaoDeRebanho','desempenho animal':'DesempenhoAnimal','gestao de lotes':'GestaoDeLotes','controle de estoque':'ControleDeEstoque','saude animal':'SaudeAnimal','gestao de pastagens':'GestaoDePastagens','dados de pesagem':'DadosDePesagem','segundo cerebro':'SegundoCerebro',
+      'modelo de negocio':'ModeloDeNegocio','proposta de valor':'PropostaDeValor','vantagem competitiva':'VantagemCompetitiva','efeitos de rede':'EfeitosDeRede','efeito de rede':'EfeitosDeRede','economia de escala':'EconomiaDeEscala','go to market':'GoToMarket','product led growth':'ProductLedGrowth','liderado por produto':'ProductLedGrowth','liderada por produto':'ProductLedGrowth','liderado por vendas':'SalesLed','liderada por vendas':'SalesLed','oceano azul':'OceanoAzul','oceano vermelho':'OceanoVermelho','aquisicao de clientes':'AquisicaoDeClientes','retencao de clientes':'RetencaoDeClientes','jornada do cliente':'JornadaDoCliente','sucesso do cliente':'SucessoDoCliente','experiencia do usuario':'ExperienciaDoUsuario','ciclo de vendas':'CicloDeVendas','funil de vendas':'FunilDeVendas','tour do produto':'TourDoProduto','plano gratuito':'PlanoGratuito','time to value':'TimeToValue','curva de aprendizado':'CurvaDeAprendizado','pesquisa de clientes':'PesquisaDeClientes','receita recorrente':'ReceitaRecorrente','ticket medio':'TicketMedio','custo de aquisicao':'CustoDeAquisicao','tomada de decisao':'TomadaDeDecisao','pensamento sistemico':'PensamentoSistemico','gestao do tempo':'GestaoDoTempo',
+      'plataforma':'Plataforma','ecossistema':'Ecossistema','zettelkasten':'Zettelkasten','freemium':'Freemium','churn':'Churn','onboarding':'Onboarding','marketing':'Marketing','branding':'Branding','lideranca':'Lideranca','estrategia':'Estrategia','inovacao':'Inovacao','curadoria':'Curadoria','monetizacao':'Monetizacao','reintermediacao':'Reintermediacao','disrupcao':'Disrupcao','escalabilidade':'Escalabilidade','algoritmo':'Algoritmo','comunidade':'Comunidade','habito':'Habito','habitos':'Habitos'},
     synonyms:{gado:'rebanho',bovinos:'rebanho',boi:'rebanho',bois:'rebanho'}
   };
   (function(){
-    'de da do das dos a o as os um uma uns umas em no na nos nas por para com sem sob sobre ao aos e ou mas que se como quando onde qual quais quem cujo the of to and in is it this that voce seu sua seus suas ja nao sim isso isto esse essa este esta aquilo ainda agora mesmo entao apenas talvez aqui ali vou vamos foi era ser estar muito pouco mais menos cada toda todo todos todas nesse nessa neste nesta num numa dele dela deles delas lhe lhes assim porque pois enquanto rapidamente meta abaixo nossa nosso segundo'.split(' ').forEach(function(w){HT.gram[w]=1;});
-    'gestao resultado resultados animal animais fazenda dados tecnologia controle melhoria melhorias producao sistema sistemas processo processos informacao informacoes acompanhamento desempenho produtividade solucao solucoes ferramenta plataforma coisa coisas empresa produto mercado negocio recurso recursos'.split(' ').forEach(function(w){HT.generic[w]=1;});
-    'acompanhar controlar melhorar analisar identificar monitorar aumentar gerir gerenciar usar utilizar conhecer encontrar reduzir otimizar planejar fazer ver ter obter garantir medir acompanhe controle melhore analise identifique monitore aumente use utilize conheca encontre reduza otimize planeje faca veja tenha obtenha garanta meca estao consumindo entregar entregue'.split(' ').forEach(function(w){HT.verbs[w]=1;});
+    'de da do das dos a o as os um uma uns umas em no na nos nas por para com sem sob sobre ao aos e ou mas que se como quando onde qual quais quem cujo the of to and in is it this that voce seu sua seus suas ja nao sim isso isto esse essa este esta aquilo ainda agora mesmo entao apenas talvez aqui ali vou vamos foi era ser estar muito pouco mais menos cada toda todo todos todas nesse nessa neste nesta num numa dele dela deles delas lhe lhes assim porque pois enquanto rapidamente meta abaixo nossa nosso segundo entre apos ante contra desde ate perante durante mediante conforme algo alguem tudo nada la ca deste desta destes destas naquele naquela pelo pela pelos pelas proprio propria proprios proprias pronto pronta prontos prontas'.split(' ').forEach(function(w){HT.gram[w]=1;});
+    'gestao resultado resultados animal animais fazenda dados tecnologia controle melhoria melhorias producao sistema sistemas processo processos informacao informacoes acompanhamento desempenho produtividade solucao solucoes ferramenta plataforma coisa coisas empresa produto mercado negocio recurso recursos pessoa pessoas forma formas maneira jeito parte partes ponto pontos caso casos vez vezes exemplo exemplos tipo tipos lugar momento hora horas dia dias mes meses ano anos gente coisa risca regra item itens taxa americano americana americanos americanas diversos diversas'.split(' ').forEach(function(w){HT.generic[w]=1;});
+    'acompanhar controlar melhorar analisar identificar monitorar aumentar gerir gerenciar usar utilizar conhecer encontrar reduzir otimizar planejar fazer ver ter obter garantir medir acompanhe controle melhore analise identifique monitore aumente use utilize conheca encontre reduza otimize planeje faca veja tenha obtenha garanta meca estao consumindo entregar entregue escrever escreva cobrar cobre cobram cobra pagar pague criar crie criam cria considerar considere perceber perceba precisa precisam precisar significa significar entender entenda seguir siga levar leve dar deixar permitir receber recebe recebem recebeu recebera exigir exige exigem gastar gasta gastam gastou procurar procura procurando consolidar consolidando'.split(' ').forEach(function(w){HT.verbs[w]=1;});
     'teste conteudo texto post publicacao informacao'.split(' ').forEach(function(w){HT.blacklist[w]=1;});
   })();
   function htDeburr(s){return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ç/g,'c').replace(/Ç/g,'C');}
@@ -453,6 +465,8 @@
     Object.keys(HT.preferred).forEach(function(key){ if(raw.indexOf(' '+key+' ')>=0) list.push({value:'#'+HT.preferred[key],source:key,type:'taxonomia',score:9,confidence:0.96,core:HT.preferred[key].toLowerCase()}); });
     /* 2) verbo → conceito (infinitivo mapeado + substantivo objeto) */
     for(var i=0;i<toks.length-1;i++){ if(HT.verbNoun[toks[i]]){ var j=i+1; if(HT.connectors[toks[j]])j++; var obj=toks[j]; if(obj&&obj.length>=4&&!HT.gram[obj]&&!HT.connectors[obj]&&!HT.verbs[obj]&&!HT.generic[obj]&&!/[0-9]/.test(obj)){ var core=HT.verbNoun[toks[i]]+' '+(HT.synonyms[obj]||obj); list.push({value:'#'+htCamel(core),source:toks[i]+' '+obj,type:'expressao_composta',score:6,confidence:0.85,core:core}); } } }
+    /* 2.5) siglas conhecidas, mesmo em minúsculas (plg, mql, roi…) */
+    Object.keys(HT.acronyms).forEach(function(a){ if(raw.indexOf(' '+a+' ')>=0) list.push({value:'#'+HT.acronyms[a],source:a,type:'sigla',score:6,confidence:0.9,core:a}); });
     /* 3) substantivos específicos isolados (filtro rígido: sem genéricos/verbos/advérbios/particípios) */
     var freq={};toks.forEach(function(w){freq[w]=(freq[w]||0)+1;});var seen={};
     toks.forEach(function(w,idx){
@@ -464,13 +478,25 @@
       var syn=HT.synonyms[w]||w;var score=2;if(freq[w]>1)score+=1;if(idx<6)score+=2;
       list.push({value:'#'+htCamel(syn),source:w,type:'conceito_simples',score:score,confidence:Math.max(0,Math.min(0.95,0.45+0.08*score)),core:syn});
     });
+    /* 4) nomes próprios e siglas do texto original — funciona para qualquer assunto */
+    (text||'').split(/[.!?\n]+/).forEach(function(s){
+      var ws=s.trim().split(/\s+/);
+      for(var wi=0;wi<ws.length;wi++){
+        var cl=ws[wi].replace(/^[^0-9A-Za-zÀ-ÿ]+|[^0-9A-Za-zÀ-ÿ]+$/g,'');
+        if(!cl)continue;
+        var low=htDeburr(cl).toLowerCase();
+        if(HT.gram[low]||HT.generic[low]||HT.verbs[low]||HT.blacklist[low]||HT.connectors[low])continue;
+        if(/^[A-ZÀ-Ý]{2,6}$/.test(cl)){ list.push({value:'#'+cl.toUpperCase(),source:cl,type:'sigla',score:6,confidence:0.9,core:low}); continue; }
+        if(wi>0 && /^[A-ZÀ-Ý][a-zà-ÿ]{2,}$/.test(cl)){ list.push({value:'#'+cl,source:cl,type:'nome_proprio',score:5,confidence:0.85,core:low}); }
+      }
+    });
     /* score → confiança → dedupe (por corpo, ignorando '#') → Top N */
     list.sort(function(a,b){return b.score-a.score||b.confidence-a.confidence||a.value.length-b.value.length;});
     var chosen=[];
     for(var k=0;k<list.length;k++){
       var it=list[k]; if(it.confidence<cfg.minConfidence)continue;
       var B=it.value.slice(1).toLowerCase();
-      var dup=chosen.some(function(ch){var A=ch.value.slice(1).toLowerCase();return A===B||A.indexOf(B)>=0||B.indexOf(A)>=0;});
+      var dup=chosen.some(function(ch){var A=ch.value.slice(1).toLowerCase();if(A===B)return true;return Math.min(A.length,B.length)>=5&&(A.indexOf(B)>=0||B.indexOf(A)>=0);});
       if(dup)continue; chosen.push(it);
       if(chosen.length>=cfg.maxHashtags)break;
     }
@@ -484,16 +510,17 @@
   function autoTags(text,max){return HT.generate(text,{maxHashtags:max||5,minHashtags:1}).hashtags.map(function(h){return h.replace(/^#/,'');});}
   function suggestTags(text){return autoTags(text,5);}
   function regenAllTags(){
-    if(!notes.length){toast('Nenhuma nota para processar.');return;}
-    var n0=notes.length;
-    notes.forEach(function(n){n.tags=autoTags(noteText(n),4);});
+    var bookIds={};folders.forEach(function(f){if(f.type==='book')bookIds[f.id]=1;});
+    var targets=notes.filter(function(n){return !bookIds[n.folderId];});
+    if(!targets.length){toast('Nada para regerar fora dos livros.');return;}
+    targets.forEach(function(n){n.tags=autoTags(noteText(n),4);n.updatedAt=now();});
     render();
     if(sb){
       var chunk=function(a,s){var o=[];for(var i=0;i<a.length;i+=s)o.push(a.slice(i,i+s));return o;};
       var p=Promise.resolve();
-      chunk(notes.map(toDbNote),150).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
-      p.then(function(){toast('Etiquetas regeneradas ✓ '+n0+' notas');}).catch(function(e){toast('Erro ao salvar: '+((e&&e.message)||'tente de novo'));});
-    } else { toast('Regenerado (demo) ✓ '+n0+' notas'); }
+      chunk(targets.map(toDbNote),150).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
+      p.then(function(){toast('Etiquetas regeneradas ✓ '+targets.length+' notas');}).catch(function(e){toast('Erro ao salvar: '+((e&&e.message)||'tente de novo'));});
+    } else { toast('Regenerado (demo) ✓ '+targets.length+' notas'); }
   }
 
   /* ============ Supabase storage ============ */
@@ -784,7 +811,9 @@
     }
     var sub=f.type==='inbox'?'Capture aqui sem pensar. Depois processe: mande para um livro e conecte com [[outras notas]].':f.type==='book'?'Suas notas mentais sobre este livro. Escreva com suas palavras — é assim que fixa (Zettelkasten).':'Anotações gerais.';
     h+='<p class="view-sub">'+sub+'</p>';
-    if(f.type!=='inbox'&&f.id!=='geral')h+='<div class="filter-bar"><button class="chip" data-act="edit-folder" data-id="'+f.id+'">✎ editar pasta</button><button class="chip" data-act="del-folder" data-id="'+f.id+'">excluir</button></div>';
+    var fa='<div class="folder-actions"><button class="fbtn primary" data-act="export-folder" data-id="'+f.id+'" title="Baixar CSV desta pasta para melhorar as etiquetas com IA">'+ic('down')+' Exportar p/ IA</button>';
+    if(f.type!=='inbox'&&f.id!=='geral')fa+='<button class="fbtn" data-act="edit-folder" data-id="'+f.id+'">'+ic('pen')+' Editar</button><button class="fbtn danger" data-act="del-folder" data-id="'+f.id+'">'+ic('trash')+' Excluir</button>';
+    fa+='</div>';h+=fa;
     if(!list.length)h+=emptyState(f);else h+='<div class="notes">'+list.map(cardHTML).join('')+'</div>';
     return h;
   }
@@ -940,6 +969,7 @@
     return rows;
   }
   function csvKey(h){h=(h||'').trim().toLowerCase();
+    if(/^(id|identificador)$/.test(h))return 'id';
     if(/^(livro|book|obra)/.test(h))return 'book';
     if(/(autor|author)/.test(h))return 'author';
     if(/(etiqueta|tag)/.test(h))return 'tags';
@@ -954,31 +984,57 @@
     var head=rows[0].map(csvKey);
     if(head.indexOf('book')<0 && head.indexOf('body')<0) return {error:'Cabeçalho não reconhecido. Use colunas como: livro, nota (e opcionais autor, titulo, etiquetas, pagina).'};
     var byName={}; folders.forEach(function(f){if(f.type==='book')byName[(f.name||'').toLowerCase()]=f;});
-    var newFolders=[],newNotes=[],skipped=0,used={};
+    var byId={}; notes.forEach(function(n){byId[n.id]=n;});
+    var newFolders=[],newNotes=[],updates=[],skipped=0,used={};
+    var splitTags=function(s){return s?s.split(/[;|]/).map(function(x){return x.trim().toLowerCase();}).filter(Boolean):[];};
     for(var r=1;r<rows.length;r++){
       var o={};for(var c=0;c<rows[r].length;c++){var k=head[c];if(k)o[k]=(rows[r][c]||'').trim();}
+      /* atualização de nota existente (traz o id) — não duplica */
+      if(o.id && byId[o.id]){
+        var ex=byId[o.id];
+        var uTags=(o.tags!==undefined)?splitTags(o.tags):(ex.tags||[]);
+        var uBody=(o.body!==undefined&&o.body!=='')?o.body:ex.body;
+        updates.push(Object.assign({},ex,{tags:uTags,body:uBody,updatedAt:now()}));
+        continue;
+      }
       if(!(o.body||o.title)){skipped++;continue;}
       var bookName=(o.book||'Importados').trim()||'Importados';var key=bookName.toLowerCase();used[key]=1;
       var f=byName[key];
       if(!f){f={id:uidGen('f'),name:bookName,type:'book',icon:'book',author:o.author||'',cover:'',order:folders.length+newFolders.length,createdAt:now()};byName[key]=f;newFolders.push(f);}
       var body=o.body||'';if(o.page)body+=(body?'\n\n':'')+'— '+o.page;
       var title=o.title||(body?body.replace(/\n/g,' ').slice(0,70).trim()+(body.length>70?'…':''):'Nota');
-      var tags=o.tags?o.tags.split(/[;|]/).map(function(s){return s.trim().toLowerCase();}).filter(Boolean):[];
-      newNotes.push({id:uidGen('n'),title:title,body:body,folderId:f.id,status:'kept',tags:tags,createdAt:now(),updatedAt:now()});
+      newNotes.push({id:o.id||uidGen('n'),title:title,body:body,folderId:f.id,status:'kept',tags:splitTags(o.tags),createdAt:now(),updatedAt:now()});
     }
-    return {folders:newFolders,notes:newNotes,skipped:skipped,books:Object.keys(used).length};
+    return {folders:newFolders,notes:newNotes,updates:updates,skipped:skipped,books:Object.keys(used).length};
   }
   function runImport(plan){
     plan.folders.forEach(function(f){folders.push(f);});
     plan.notes.forEach(function(n){notes.unshift(n);});
+    (plan.updates||[]).forEach(function(u){var i=notes.map(function(x){return x.id;}).indexOf(u.id);if(i>=0)notes[i]=u;else notes.unshift(u);});
     render();
+    var total=plan.notes.length+((plan.updates||[]).length);
     if(sb){
       var chunk=function(a,n){var o=[];for(var i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o;};
       var p=Promise.resolve();
       if(plan.folders.length)p=p.then(function(){return sb.from('folders').upsert(plan.folders.map(toDbFolder));});
-      chunk(plan.notes.map(toDbNote),200).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
-      p.then(function(){toast('Importado ✓ '+plan.notes.length+' notas');}).catch(function(e){toast('Erro ao importar: '+((e&&e.message)||'tente de novo'));});
-    } else { toast('Importado (demo) ✓ '+plan.notes.length+' notas'); }
+      chunk(plan.notes.concat(plan.updates||[]).map(toDbNote),200).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
+      p.then(function(){toast('Importado ✓ '+total+' notas');}).catch(function(e){toast('Erro ao importar: '+((e&&e.message)||'tente de novo'));});
+    } else { toast('Importado (demo) ✓ '+total+' notas'); }
+  }
+  function csvCell(v){v=(v==null?'':String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  function exportNotes(fid){
+    var f=fid?folderById(fid):null;
+    var list=fid?notesIn(fid):notes.slice();
+    if(!list.length){toast('Nada para exportar aqui.');return;}
+    var lines=['id,livro,autor,nota,etiquetas,pagina'];
+    list.forEach(function(n){
+      var fo=folderById(n.folderId);
+      lines.push([csvCell(n.id),csvCell(fo?fo.name:''),csvCell(fo?(fo.author||''):''),csvCell(noteText(n)),csvCell((n.tags||[]).join(';')),''].join(','));
+    });
+    var csv='﻿'+lines.join('\n')+'\n';
+    var name=((f?f.name:'todas-as-notas')||'notas').replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||'notas';
+    try{var bl=new Blob([csv],{type:'text/csv;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='sinapse-'+name+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},120);toast('Exportado ✓ '+list.length+' nota'+(list.length!==1?'s':''));}
+    catch(e){toast('Não consegui baixar aqui. Tente no app publicado.');}
   }
   function openImportModal(){
     var plan=null;
@@ -1007,8 +1063,9 @@
           if(!res){$('#impInfo').textContent='CSV vazio ou sem linhas de dados.';return;}
           if(res.error){$('#impInfo').innerHTML='<span style="color:var(--danger)">'+esc(res.error)+'</span>';return;}
           plan=res;
-          $('#impInfo').innerHTML='Encontrei <b>'+plan.notes.length+' nota(s)</b> em <b>'+plan.books+' livro(s)</b>'+(plan.folders.length?' — '+plan.folders.length+' livro(s) novo(s)':'')+(plan.skipped?' · '+plan.skipped+' linha(s) ignorada(s)':'')+'. Confira e confirme.';
-          act.textContent='Importar '+plan.notes.length+' nota(s)';
+          var nu=(plan.updates||[]).length;
+          $('#impInfo').innerHTML='Encontrei <b>'+plan.notes.length+' nota(s) nova(s)</b>'+(nu?' e <b>'+nu+' atualização(ões)</b>':'')+' em <b>'+plan.books+' livro(s)</b>'+(plan.folders.length?' — '+plan.folders.length+' livro(s) novo(s)':'')+(plan.skipped?' · '+plan.skipped+' linha(s) ignorada(s)':'')+'. Confira e confirme.';
+          act.textContent=(nu&&!plan.notes.length?'Atualizar '+nu+' nota(s)':'Importar '+(plan.notes.length+nu)+' nota(s)');
           return;
         }
         var pl=plan;close();runImport(pl);go({name:'library',folderId:view.folderId,noteId:null,tag:null,q:''});
@@ -1098,11 +1155,12 @@
         case 'new-book':openFolderModal('book');break;
         case 'import-csv':openImportModal();break;
         case 'new-folder':openFolderModal('general');break;
+        case 'export-folder':exportNotes(id);break;
         case 'edit-folder':openFolderModal(null,folderById(id));break;
         case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''},{replace:true});toast('Pasta excluída.');}break;
         case 'tag':closeRail();go({name:'search',folderId:view.folderId,noteId:null,tag:tag,q:'',showAllTags:false,tagFilter:''});break;
         case 'ftag':view.name='search';view.noteId=null;view.tag=(view.tag===tag?null:tag);render();break;
-        case 'regen-tags':if(confirm('Regerar as etiquetas de TODAS as notas com o motor novo? Isso substitui as etiquetas atuais.')){regenAllTags();}break;
+        case 'regen-tags':if(confirm('Regerar etiquetas das notas do Inbox e pastas gerais com o motor novo? As etiquetas dos livros importados são preservadas.')){regenAllTags();}break;
         case 'more-tags':view.showAllTags=true;render();break;
         case 'less-tags':view.showAllTags=false;view.tagFilter='';render();break;
         case 'add-tag':var ti=$('#e-tags');if(ti){var curr=ti.value.split(',').map(function(s){return s.trim();}).filter(Boolean);if(curr.indexOf(tag)<0)curr.push(tag);ti.value=curr.join(', ');el.style.display='none';}break;
@@ -1114,6 +1172,7 @@
     if(wantListening){var b=$('#cap');if(b)b.value=capBase;setMicUI(true);}
   }
   function closeRail(){var r=$('#rail');if(r)r.classList.remove('open');}
+  function savedMsg(label){return label+(sb?' ✓ na nuvem':' ✓');}
   function doCapture(destId){
     if(wantListening){wantListening=false;try{recog.stop();}catch(e){}releaseWake();}
     var cap=$('#cap');var text=cap?cap.value.trim():capBase.trim();capBase='';
