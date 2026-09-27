@@ -38,7 +38,10 @@
   ::selection{background:var(--accent-soft)}
   #app{height:100%;display:flex;flex-direction:column}
 
-  .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:14px 20px}
+  .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--surface) 88%, transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:12px 16px}
+  .topbar>.menu-btn{justify-self:start}
+  .topbar>.search-btn{justify-self:end}
+  .topbar>.brand{justify-self:center}
   .brand{display:flex;align-items:center;gap:7px;min-width:0;cursor:pointer;border-radius:10px;transition:opacity .12s}
   .brand:hover{opacity:.78}
   .glyph{width:34px;height:34px;flex:none}
@@ -58,12 +61,16 @@
   @media(max-width:600px){.sync-dot span{display:none}}
 
   .shell{flex:1;min-height:0;display:flex;overflow:hidden}
-  .rail{width:256px;flex:none;border-right:1px solid var(--line);background:var(--surface);overflow-y:auto;padding:20px 14px 40px}
+  .rail{width:256px;flex:none;border-right:1px solid var(--line);background:var(--surface);overflow-y:auto;padding:20px 14px 24px;display:flex;flex-direction:column}
+  .rail-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
+  @media(min-width:821px){.shell.rail-collapsed .rail{display:none}}
+  .nav-item.danger{color:var(--danger)}
+  .nav-item.danger .em{color:var(--danger)}
   .main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column}
   .main-inner{width:100%;max-width:720px;margin:0 auto;padding:28px 22px 100px;flex:1}
   @media(max-width:820px){
     .rail{display:none}
-    .rail.open{display:block;position:fixed;inset:calc(env(safe-area-inset-top,0px) + 66px) 0 0 0;z-index:40;width:auto;border-right:none;border-bottom:1px solid var(--line);background:var(--surface);box-shadow:0 12px 30px rgba(34,41,47,.18)}
+    .rail.open{display:flex;flex-direction:column;position:fixed;inset:calc(env(safe-area-inset-top,0px) + 62px) 0 0 0;z-index:40;width:auto;border-right:none;border-bottom:1px solid var(--line);background:var(--surface);box-shadow:0 12px 30px rgba(34,41,47,.18)}
     .main-inner{padding:16px 16px 90px}
     .fstrip{display:flex}
   }
@@ -344,6 +351,7 @@
   var view={name:'folder', folderId:'inbox', noteId:null, tag:null, q:''};
   var editing=false, conn='connecting'; // connecting | ok | off
   var routed=false;
+  var railCollapsed=(function(){try{return localStorage.getItem('sinapse_rail')==='1';}catch(e){return false;}})();
   var signMode='in';
 
   /* voice */
@@ -714,20 +722,16 @@
   var app=$('#app');
   function render(){
     if(!session){return;}
-    var html=topbar()+folderStrip()+'<div class="shell">'+rail()+'<div class="main"><div class="main-inner">'+mainView()+'</div></div></div>';
+    var html=topbar()+folderStrip()+'<div class="shell'+(railCollapsed?' rail-collapsed':'')+'">'+rail()+'<div class="main"><div class="main-inner">'+mainView()+'</div></div></div>';
     app.innerHTML=html; wire();
   }
   function iconGlyph(){return '<svg class="glyph" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><line x1="14" y1="15" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="38" y1="12" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="37" y1="38" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><line x1="14" y1="37" x2="25" y2="26" stroke="#C7C2F5" stroke-width="2"/><circle cx="25" cy="26" r="7" fill="#7367F0"/><circle cx="14" cy="15" r="4" fill="#7367F0"/><circle cx="38" cy="12" r="3.4" fill="#FF9F43"/><circle cx="37" cy="38" r="4" fill="#7367F0"/><circle cx="14" cy="37" r="3.4" fill="#28C76F"/></svg>';}
   function topbar(){
-    var sc=conn==='ok'?{c:'ok',t:'ATUALIZADO'}:conn==='off'?{c:'off',t:'erro'}:{c:'wait',t:'conectando'};
     return '<div class="topbar">'+
-      '<div class="brand" data-act="home" role="button" tabindex="0" title="Início">'+iconGlyph()+'<div><h1>Sinapse</h1><small>segundo cérebro conectado</small></div></div>'+
-      '<div class="top-actions">'+
-        '<button class="sync-dot '+sc.c+'" data-act="recheck" title="Atualizar">'+(conn==='ok'?ic('check'):'<i></i>')+'<span>'+sc.t+'</span></button>'+
-        '<button class="icon-btn" data-act="go-search" title="Buscar">'+ic('search')+'</button>'+
-        '<button class="icon-btn" data-act="signout" title="Sair">'+ic('out')+'</button>'+
-        '<button class="icon-btn" data-act="menu" title="Pastas">'+ic('menu')+'</button>'+
-      '</div></div>';
+      '<button class="icon-btn menu-btn" data-act="menu" title="Menu">'+ic('menu')+'</button>'+
+      '<div class="brand" data-act="home" role="button" tabindex="0" title="Início">'+iconGlyph()+'<div><h1>Sinapse</h1><small>2nd Brain</small></div></div>'+
+      '<button class="icon-btn search-btn" data-act="go-search" title="Buscar">'+ic('search')+'</button>'+
+    '</div>';
   }
   function folderStrip(){
     var fs=sortedFolders();if(!fs.length)return '';
@@ -745,6 +749,11 @@
     h+='<div class="rail-group">'+special.map(item).join('')+'</div>';
     h+='<div class="rail-group"><div class="rail-label">Livros<button data-act="new-book">+ livro</button></div>'+(books.length?books.map(item).join(''):'<div style="font-size:12.5px;color:var(--faint);padding:2px 10px;line-height:1.5">Cada livro vira uma pasta. Crie a primeira.</div>')+'</div>';
     h+='<div class="rail-group"><div class="rail-label">Pastas<button data-act="new-folder">+ pasta</button></div>'+(others.length?others.map(item).join(''):'<div style="font-size:12.5px;color:var(--faint);padding:2px 10px;line-height:1.5">Pastas gerais aparecem aqui.</div>')+'</div>';
+    var sc=conn==='ok'?'Atualizado':conn==='off'?'Sem conexão':'Conectando…';
+    h+='<div class="rail-foot">'+
+      '<button class="nav-item" data-act="recheck"><span class="em">'+ic('refresh')+'</span>Atualizar<span class="ct" style="text-transform:none;letter-spacing:0">'+sc+'</span></button>'+
+      '<button class="nav-item danger" data-act="signout"><span class="em">'+ic('out')+'</span>Sair da conta</button>'+
+    '</div>';
     h+='</div>';return h;
   }
   function mainView(){
@@ -1066,7 +1075,10 @@
       var el=e.target.closest('[data-act]');if(!el)return;var a=el.getAttribute('data-act'),id=el.getAttribute('data-id'),tag=el.getAttribute('data-tag');
       if(['home','folder','rede','go-search','open','back','edit','del-folder','new-book','new-folder','signout','library'].indexOf(a)>=0)abortMic();
       switch(a){
-        case 'menu':var r=$('#rail');if(r)r.classList.toggle('open');break;
+        case 'menu':
+          if(window.matchMedia('(max-width:820px)').matches){var r=$('#rail');if(r)r.classList.toggle('open');}
+          else{railCollapsed=!railCollapsed;try{localStorage.setItem('sinapse_rail',railCollapsed?'1':'0');}catch(e){}render();}
+          break;
         case 'home':editing=false;closeRail();go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''});window.scrollTo(0,0);break;
         case 'library':editing=false;closeRail();go({name:'library',folderId:view.folderId,noteId:null,tag:null,q:''});break;
         case 'theme':toggleTheme();break;
