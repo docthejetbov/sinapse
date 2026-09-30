@@ -130,6 +130,14 @@
   .fbtn.primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
   .fbtn.danger:hover{border-color:var(--danger);color:var(--danger);box-shadow:none}
   .fbtn.danger:hover svg{color:var(--danger)}
+  .graph-wrap{position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);overflow:hidden;margin:8px 0 24px}
+  #tgraph{display:block;width:100%;height:440px;touch-action:none;cursor:grab}
+  #tgraph:active{cursor:grabbing}
+  .graph-tools{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px}
+  .graph-tools button{width:34px;height:34px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:9px;font-size:17px;font-weight:700;display:grid;place-items:center;box-shadow:0 1px 3px rgba(34,41,47,.08);transition:.12s}
+  .graph-tools button:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .graph-hint{position:absolute;left:12px;bottom:10px;font-size:11px;color:var(--faint);font-family:var(--mono);pointer-events:none}
+  @media(max-width:600px){#tgraph{height:360px}}
   .view-head{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
   .view-head h2{font-family:var(--serif);font-weight:800;font-size:26px;margin:0;letter-spacing:-.02em}
   .view-head .n{font-family:var(--mono);font-size:12px;color:var(--faint)}
@@ -922,6 +930,10 @@
     var h='<div class="view-head"><h2><span class="hicon">'+ic('network')+'</span> Rede</h2></div>';
     h+='<div class="rede-intro"><b>A ideia:</b> cada nota é um neurônio. Quanto mais você conecta com <code style="font-family:var(--mono);font-size:.85em;background:var(--surface-2);padding:1px 5px;border-radius:4px">[[links]]</code> e etiquetas, mais fácil puxar um assunto depois. Luhmann + Second Brain de Tiago Forte, na prática.</div>';
     h+='<div class="stat-row">'+stat(notes.length,'notas')+stat(folders.filter(function(f){return f.type==='book';}).length,'livros')+stat(linkCount(),'conexões')+stat(tags.length,'etiquetas')+'</div>';
+    h+='<div class="conn-h" style="margin:22px 0 4px">'+ic('network')+' Mapa de conexões <span style="font-weight:400;color:var(--faint);font-size:12px">· as etiquetas ligam suas notas</span></div>';
+    if(notes.some(function(n){return (n.tags||[]).length;})){
+      h+='<div class="graph-wrap"><canvas id="tgraph"></canvas><div class="graph-tools"><button id="gzin" title="Aproximar">+</button><button id="gzout" title="Afastar">−</button><button id="gfit" title="Centralizar">⤢</button></div><div class="graph-hint">arraste para mover · role para dar zoom · toque num ponto para abrir</div></div>';
+    } else { h+='<div class="conn-empty" style="margin-bottom:24px">Adicione etiquetas às notas para ver o mapa.</div>'; }
     if(inbox.length){h+='<div class="conn-h" style="margin-bottom:10px">'+ic('inbox')+' Para processar ('+inbox.length+')</div><div class="notes" style="margin-bottom:26px">'+inbox.slice(0,5).map(cardHTML).join('')+'</div>';}
     h+='<div class="conn-h" style="margin-bottom:12px">'+ic('related')+' Assuntos</div>';
     if(!tags.length)h+='<div class="conn-empty" style="margin-bottom:24px">Adicione etiquetas às notas para ver seus assuntos aqui.</div>';
@@ -930,6 +942,76 @@
     return h;
   }
   function stat(v,k){return '<div class="stat"><div class="v">'+v+'</div><div class="k">'+k+'</div></div>';}
+
+  var graphRAF=null;
+  function cssVar(n){return (getComputedStyle(document.documentElement).getPropertyValue(n)||'').trim();}
+  function buildTagGraph(){
+    var cv=document.getElementById('tgraph'); if(!cv)return;
+    if(graphRAF){cancelAnimationFrame(graphRAF);graphRAF=null;}
+    var ctx=cv.getContext('2d');
+    var col={ink:cssVar('--ink')||'#3E3B4D',faint:cssVar('--faint')||'#A29FB5',accent:cssVar('--accent')||'#7367F0',accentSoft:cssVar('--accent-soft')||'#EEEDFD',line:cssVar('--line-strong')||'#DDDBEA',surf:cssVar('--surface')||'#fff'};
+    var palette=['#7367F0','#28C76F','#FF9F43','#EA5455','#00CFE8','#9C6ADE','#FF6E9C','#1FBFB8','#F6C445'];
+    var fcolor={},fi=0; function colorOf(fid){if(!(fid in fcolor)){fcolor[fid]=palette[fi%palette.length];fi++;}return fcolor[fid];}
+    var W=0,H=0,dpr=Math.min(2,window.devicePixelRatio||1);
+    function resize(){W=cv.clientWidth||600;H=cv.clientHeight||420;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+    resize();
+    var used=notes.filter(function(n){return (n.tags||[]).length;});
+    var tagCount={}; used.forEach(function(n){(n.tags||[]).forEach(function(t){tagCount[t]=(tagCount[t]||0)+1;});});
+    var nodes=[],idx={};
+    function add(id,o){o.id=id;o.x=W/2+(Math.random()-.5)*Math.min(W,400);o.y=H/2+(Math.random()-.5)*Math.min(H,300);o.vx=0;o.vy=0;o.fixed=false;idx[id]=nodes.length;nodes.push(o);}
+    Object.keys(tagCount).forEach(function(t){add('t:'+t,{type:'tag',label:t,count:tagCount[t],r:Math.min(18,7+tagCount[t]*1.6)});});
+    used.forEach(function(n){add('n:'+n.id,{type:'note',noteId:n.id,folderId:n.folderId,r:5});});
+    var links=[];
+    used.forEach(function(n){(n.tags||[]).forEach(function(t){if(idx['t:'+t]!=null)links.push([idx['n:'+n.id],idx['t:'+t]]);});});
+    var scale=1,ox=0,oy=0,alpha=1;
+    function step(){
+      var i,j,a,b,dx,dy,d2,d,f,fx,fy;
+      for(i=0;i<nodes.length;i++){a=nodes[i];for(j=i+1;j<nodes.length;j++){b=nodes[j];dx=a.x-b.x;dy=a.y-b.y;d2=dx*dx+dy*dy+0.01;d=Math.sqrt(d2);f=((a.type==='tag'||b.type==='tag')?1600:600)/d2;fx=dx/d*f;fy=dy/d*f;a.vx+=fx;a.vy+=fy;b.vx-=fx;b.vy-=fy;}}
+      links.forEach(function(l){a=nodes[l[0]];b=nodes[l[1]];dx=b.x-a.x;dy=b.y-a.y;d=Math.sqrt(dx*dx+dy*dy)+0.01;f=(d-64)*0.02;fx=dx/d*f;fy=dy/d*f;a.vx+=fx;a.vy+=fy;b.vx-=fx;b.vy-=fy;});
+      nodes.forEach(function(n){n.vx+=(W/2-n.x)*0.0016;n.vy+=(H/2-n.y)*0.0016;n.vx*=0.86;n.vy*=0.86;if(!n.fixed){n.x+=n.vx*alpha;n.y+=n.vy*alpha;}});
+      alpha=Math.max(0.06,alpha*0.985);
+    }
+    function fit(){
+      if(!nodes.length)return;
+      var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+      nodes.forEach(function(n){minx=Math.min(minx,n.x);miny=Math.min(miny,n.y);maxx=Math.max(maxx,n.x);maxy=Math.max(maxy,n.y);});
+      var gw=(maxx-minx)||1,gh=(maxy-miny)||1,pad=40;
+      scale=Math.min(2,Math.max(0.3,Math.min((W-pad*2)/gw,(H-pad*2)/gh)));
+      ox=W/2-((minx+maxx)/2)*scale; oy=H/2-((miny+maxy)/2)*scale;
+    }
+    for(var w=0;w<90;w++)step(); fit();
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+      ctx.strokeStyle=col.accent+'26';ctx.lineWidth=1/scale;
+      links.forEach(function(l){var a=nodes[l[0]],b=nodes[l[1]];ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();});
+      nodes.forEach(function(n){
+        ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,6.2832);
+        if(n.type==='tag'){ctx.fillStyle=col.accentSoft;ctx.fill();ctx.lineWidth=1.6/scale;ctx.strokeStyle=col.accent;ctx.stroke();}
+        else{ctx.fillStyle=colorOf(n.folderId);ctx.fill();}
+      });
+      ctx.fillStyle=col.ink;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+      var fs=Math.max(9,Math.min(13,11/Math.sqrt(scale)));ctx.font='600 '+fs+'px '+(cssVar('--sans')||'sans-serif');
+      nodes.forEach(function(n){if(n.type==='tag')ctx.fillText('#'+n.label,n.x,n.y-n.r-3);});
+      ctx.restore();
+    }
+    function loop(){step();step();draw();if(document.getElementById('tgraph')!==cv){graphRAF=null;return;}graphRAF=requestAnimationFrame(loop);}
+    loop();
+    function nodeAt(px,py){var wx=(px-ox)/scale,wy=(py-oy)/scale;for(var i=nodes.length-1;i>=0;i--){var n=nodes[i];var dx=wx-n.x,dy=wy-n.y;if(dx*dx+dy*dy<=(n.r+6)*(n.r+6))return n;}return null;}
+    var drag=null,panning=false,lastx=0,lasty=0,downx=0,downy=0,moved=0;
+    function rel(e){var r=cv.getBoundingClientRect();var t=e.touches?e.touches[0]:e;return {x:t.clientX-r.left,y:t.clientY-r.top};}
+    cv.addEventListener('pointerdown',function(e){cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);var p=rel(e);downx=lastx=p.x;downy=lasty=p.y;moved=0;var n=nodeAt(p.x,p.y);if(n){drag=n;n.fixed=true;}else{panning=true;}alpha=Math.max(alpha,0.5);});
+    cv.addEventListener('pointermove',function(e){var p=rel(e);var ddx=p.x-lastx,ddy=p.y-lasty;moved+=Math.abs(ddx)+Math.abs(ddy);if(drag){drag.x+=ddx/scale;drag.y+=ddy/scale;}else if(panning){ox+=ddx;oy+=ddy;}lastx=p.x;lasty=p.y;});
+    function up(e){if(drag){drag.fixed=false;}if(moved<5){var n=nodeAt(downx,downy);if(n){if(n.type==='note'){editing=false;go({name:'note',folderId:view.folderId,noteId:n.noteId,tag:null,q:''});window.scrollTo(0,0);}else{closeRail();go({name:'search',folderId:view.folderId,noteId:null,tag:n.label,q:'',showAllTags:false,tagFilter:''});}}}drag=null;panning=false;}
+    cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+    cv.addEventListener('wheel',function(e){e.preventDefault();var p=rel(e);var wx=(p.x-ox)/scale,wy=(p.y-oy)/scale;var ns=Math.min(3,Math.max(0.25,scale*(e.deltaY<0?1.12:0.89)));ox=p.x-wx*ns;oy=p.y-wy*ns;scale=ns;},{passive:false});
+    var zin=document.getElementById('gzin'),zout=document.getElementById('gzout'),gf=document.getElementById('gfit');
+    function zoomAt(k){var wx=(W/2-ox)/scale,wy=(H/2-oy)/scale;scale=Math.min(3,Math.max(0.25,scale*k));ox=W/2-wx*scale;oy=H/2-wy*scale;}
+    if(zin)zin.onclick=function(){zoomAt(1.2);};
+    if(zout)zout.onclick=function(){zoomAt(0.83);};
+    if(gf)gf.onclick=function(){alpha=0.6;fit();};
+    window.addEventListener('resize',function(){if(document.getElementById('tgraph')===cv){resize();}});
+  }
 
   function shelfBook(f){var ct=notesIn(f.id).length;return '<button class="shelf-book" data-act="folder" data-id="'+f.id+'">'+(f.cover?'<img class="shelf-cover" src="'+f.cover+'" alt="">':'<div class="shelf-cover ph">'+ic(iconKeyOf(f))+'</div>')+'<div class="shelf-title">'+esc(f.name)+'</div>'+(f.author?'<div class="shelf-author">'+esc(f.author)+'</div>':'')+'<div class="shelf-count">'+ct+' nota'+(ct!==1?'s':'')+'</div></button>';}
   function libraryView(){
@@ -1170,6 +1252,7 @@
     };
     var eb=$('#e-body');if(eb){var grow=function(){eb.style.height='auto';eb.style.height=Math.max(220,eb.scrollHeight)+'px';};eb.addEventListener('input',grow);grow();}
     if(wantListening){var b=$('#cap');if(b)b.value=capBase;setMicUI(true);}
+    if(view.name==='rede'&&document.getElementById('tgraph'))buildTagGraph();
   }
   function closeRail(){var r=$('#rail');if(r)r.classList.remove('open');}
   function savedMsg(label){return label+(sb?' ✓ na nuvem':' ✓');}
