@@ -247,6 +247,10 @@
   .empty-note{color:var(--muted);font-size:14px;background:var(--surface-2);border:1px dashed var(--line-strong);border-radius:var(--radius-sm);padding:16px 18px}
   .note-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
   .note-tags .tag{border:none;cursor:pointer}
+  .tag-regen{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--line-strong);background:none;color:var(--muted);font-size:12px;padding:4px 10px;border-radius:var(--pill);transition:.12s}
+  .tag-regen svg{width:13px;height:13px}
+  .tag-regen:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .tag-regen.busy{opacity:.6;pointer-events:none}
   .note-detail .editrow{border-top:1px solid var(--line);border-bottom:none;padding-bottom:0;margin-bottom:0}
   .note-detail .d-body{font-size:16.5px;color:var(--ink);min-height:180px}
   .connections{margin-top:8px}
@@ -899,7 +903,7 @@
       if(n.status==='inbox')badges+='<span class="status-pill">a processar</span>';
       if(badges)h+='<div class="note-badges" style="margin-bottom:16px">'+badges+'</div>';
       h+='<div class="note-single" data-act="edit">'+(full?renderMd(full):'<span class="empty-note">Nota vazia — toque em Editar.</span>')+'</div>';
-      if((n.tags||[]).length)h+='<div class="note-tags">'+(n.tags||[]).map(function(t){return '<button class="tag" data-act="tag" data-tag="'+esc(t)+'">#'+esc(t)+'</button>';}).join('')+'</div>';
+      h+='<div class="note-tags">'+(n.tags||[]).map(function(t){return '<button class="tag" data-act="tag" data-tag="'+esc(t)+'">#'+esc(t)+'</button>';}).join('')+'<button class="tag-regen" data-act="renote-tags" data-id="'+n.id+'" title="Regerar etiquetas com IA">'+ic('refresh')+' regerar</button></div>';
     }
     h+='</div>';
     h+='<div class="connections"><div class="conn-title">'+ic('related')+' Conexões</div>'+connBlock('menciona','Menciona',out,'Use [[título de outra nota]] no texto para conectar.')+connBlock('back','Mencionada em',back,'Nenhuma outra nota aponta para esta ainda.')+connBlock('related','Relacionadas por assunto',rel,'Escreva mais ou conecte com [[links]] para achar notas vizinhas.')+'</div>';
@@ -1271,6 +1275,7 @@
         case 'new-book':openFolderModal('book');break;
         case 'import-csv':openImportModal();break;
         case 'new-folder':openFolderModal('general');break;
+        case 'renote-tags':{var rn=noteById(id);if(rn){var txt=noteText(rn);el.classList.add('busy');toast('Gerando etiquetas com IA…');aiTags(txt,4).then(function(t){rn.tags=(t&&t.length)?t:autoTags(txt,4);saveNote(rn,true);render();toast(t&&t.length?'Etiquetas atualizadas ✓ (IA)':'IA indisponível — usei o motor local');});}break;}
         case 'export-folder':exportNotes(id);break;
         case 'edit-folder':openFolderModal(null,folderById(id));break;
         case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''},{replace:true});toast('Pasta excluída.');}break;
