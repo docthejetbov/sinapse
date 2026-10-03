@@ -138,6 +138,17 @@
   .conn-link svg{width:12px;height:12px}
   .conn-link:hover{background:var(--accent);color:#fff}
   .card-synth{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-soft)}
+  .synth-modal{max-width:640px}
+  .synth-head{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+  .synth-kick{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+  .synth-kick svg{width:14px;height:14px}
+  .synth-head h3{margin:6px 0 2px;font-family:var(--serif);font-weight:700;font-size:20px;color:#2B2838}
+  .synth-when{font-size:12px;color:var(--faint)}
+  .synth-body{max-height:56vh;overflow-y:auto;font-family:var(--serif);font-size:15.5px;line-height:1.65;color:var(--ink)}
+  .synth-body h1,.synth-body h2,.synth-body h3{font-family:var(--serif);color:#2B2838;margin:18px 0 8px;font-size:16.5px}
+  .synth-body ul,.synth-body ol{margin:8px 0;padding-left:22px}
+  .synth-body li{margin:4px 0}
+  .synth-body p{margin:10px 0}
   .graph-wrap{position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);overflow:hidden;margin:8px 0 24px}
   #tgraph{display:block;width:100%;height:440px;touch-action:none;cursor:grab}
   #tgraph:active{cursor:grabbing}
@@ -423,12 +434,16 @@
     return s;
   }
   function renderMd(text){
-    var lines=(text||'').split('\n'),html='',inList=false;
+    var lines=(text||'').split('\n'),html='',list=null;
+    function closeList(){if(list){html+='</'+list+'>';list=null;}}
     for(var i=0;i<lines.length;i++){var ln=lines[i];
-      if(/^\s*[-*]\s+/.test(ln)){if(!inList){html+='<ul>';inList=true;}html+='<li>'+mdInline(ln.replace(/^\s*[-*]\s+/,''))+'</li>';}
-      else{if(inList){html+='</ul>';inList=false;}if(ln.trim()!=='')html+='<p>'+mdInline(ln)+'</p>';}
+      var hm=/^(#{1,6})\s+(.*)$/.exec(ln);
+      if(hm){closeList();var lvl=hm[1].length,tag=lvl<=1?'h2':lvl===2?'h3':'h4';html+='<'+tag+'>'+mdInline(hm[2])+'</'+tag+'>';continue;}
+      if(/^\s*[-*]\s+/.test(ln)){if(list!=='ul'){closeList();html+='<ul>';list='ul';}html+='<li>'+mdInline(ln.replace(/^\s*[-*]\s+/,''))+'</li>';continue;}
+      if(/^\s*\d+[.)]\s+/.test(ln)){if(list!=='ol'){closeList();html+='<ol>';list='ol';}html+='<li>'+mdInline(ln.replace(/^\s*\d+[.)]\s+/,''))+'</li>';continue;}
+      closeList();if(ln.trim()!=='')html+='<p>'+mdInline(ln)+'</p>';
     }
-    if(inList)html+='</ul>';
+    closeList();
     return html||'<p style="color:var(--faint);font-style:italic">Nota vazia. Toque em Editar para escrever.</p>';
   }
   function plain(text){return (text||'').replace(/\[\[([^\]]+)\]\]/g,'$1').replace(/[*=#>_`-]/g,'').replace(/\s+/g,' ').trim();}
@@ -866,13 +881,13 @@
     }
     var sub=f.type==='inbox'?'Capture aqui sem pensar. Depois processe: mande para um livro e conecte com [[outras notas]].':f.type==='book'?'Suas notas mentais sobre este livro. Escreva com suas palavras — é assim que fixa (Zettelkasten).':'Anotações gerais.';
     h+='<p class="view-sub">'+sub+'</p>';
-    var realNotes=list.filter(function(n){return (n.tags||[]).indexOf('sintese')<0;}).length;
+    var shown=list.filter(function(n){return (n.tags||[]).indexOf('sintese')<0;});
+    var hasSyn=list.length!==shown.length;
     var fa='<div class="folder-actions">';
-    if(realNotes>=3)fa+='<button class="fbtn synth" data-act="synth-folder" data-id="'+f.id+'" title="Gerar uma síntese pessoal com IA a partir de todas as notas desta pasta">'+ic('brain')+' Gerar síntese (IA)</button>';
-    fa+='<button class="fbtn primary" data-act="export-folder" data-id="'+f.id+'" title="Baixar CSV desta pasta para melhorar as etiquetas com IA">'+ic('down')+' Exportar p/ IA</button>';
+    if(shown.length>=3)fa+='<button class="fbtn synth" data-act="book-synth" data-id="'+f.id+'" title="Síntese pessoal do livro gerada por IA">'+ic('brain')+(hasSyn?' Ver síntese':' Gerar síntese (IA)')+'</button>';
     if(f.type!=='inbox'&&f.id!=='geral')fa+='<button class="fbtn" data-act="edit-folder" data-id="'+f.id+'">'+ic('pen')+' Editar</button><button class="fbtn danger" data-act="del-folder" data-id="'+f.id+'">'+ic('trash')+' Excluir</button>';
     fa+='</div>';h+=fa;
-    if(!list.length)h+=emptyState(f);else h+='<div class="notes">'+list.map(cardHTML).join('')+'</div>';
+    if(!shown.length)h+=emptyState(f);else h+='<div class="notes">'+shown.map(cardHTML).join('')+'</div>';
     return h;
   }
   function captureBar(f){
@@ -1187,10 +1202,25 @@
     aiSynthesis(combined,f.name).then(function(md){
       if(!md){toast('IA indisponível agora. Tente de novo em instantes.');return;}
       var existing=notesIn(fid).filter(function(n){return (n.tags||[]).indexOf('sintese')>=0;})[0];
-      var body='# Síntese — '+f.name+'\n\n'+md;
-      if(existing){existing.body=body;existing.title=autoTitle(body);saveNote(existing);go({name:'note',folderId:fid,noteId:existing.id,tag:null,q:''});}
-      else{var n={id:uidGen('n'),title:autoTitle(body),body:body,folderId:fid,status:'kept',tags:['sintese'],createdAt:now(),updatedAt:now()};saveNote(n);go({name:'note',folderId:fid,noteId:n.id,tag:null,q:''});}
-      window.scrollTo(0,0);toast('Síntese pronta ✓');
+      var body='# Síntese — '+f.name+'\n\n'+md;var target;
+      if(existing){existing.body=body;existing.title=autoTitle(body);saveNote(existing);target=existing;}
+      else{target={id:uidGen('n'),title:autoTitle(body),body:body,folderId:fid,status:'kept',tags:['sintese'],createdAt:now(),updatedAt:now()};saveNote(target);}
+      toast('Síntese pronta ✓');openSynthModal(fid,target);
+    });
+  }
+  function openSynthModal(fid,note){
+    var f=folderById(fid);
+    var md=(note.body||'').replace(/^#\s+S[íi]ntese[^\n]*\n+/,'');
+    var when=relTime(note.updatedAt||note.createdAt);
+    var m=document.createElement('div');m.className='modal-bg';m.id='modal';
+    m.innerHTML='<div class="modal synth-modal"><div class="synth-head"><div><div class="synth-kick">'+ic('brain')+' Síntese do livro</div><h3>'+esc(f?f.name:'')+'</h3><div class="synth-when">gerada por IA · '+when+'</div></div></div><div class="synth-body">'+renderMd(md)+'</div><div class="modal-actions"><button class="btn subtle" data-act="syn-regen">↻ Atualizar</button><button class="btn" data-act="syn-close">Fechar</button></div></div>';
+    document.body.appendChild(m);document.body.classList.add('modal-open');
+    function close(){document.body.classList.remove('modal-open');m.remove();}
+    m.addEventListener('click',function(e){
+      if(e.target===m){close();return;}
+      var a=(e.target.closest('[data-act]')||{}).getAttribute&&e.target.closest('[data-act]').getAttribute('data-act');
+      if(a==='syn-close')close();
+      else if(a==='syn-regen'){close();synthesizeFolder(fid);}
     });
   }
   function openImportModal(){
@@ -1313,8 +1343,7 @@
         case 'import-csv':openImportModal();break;
         case 'new-folder':openFolderModal('general');break;
         case 'renote-tags':{var rn=noteById(id);if(rn){var txt=noteText(rn);el.classList.add('busy');toast('Gerando etiquetas com IA…');aiTags(txt,4).then(function(t){rn.tags=(t&&t.length)?t:autoTags(txt,4);saveNote(rn,true);render();toast(t&&t.length?'Etiquetas atualizadas ✓ (IA)':'IA indisponível — usei o motor local');});}break;}
-        case 'export-folder':exportNotes(id);break;
-        case 'synth-folder':synthesizeFolder(id);break;
+        case 'book-synth':{var syn=notesIn(id).filter(function(n){return (n.tags||[]).indexOf('sintese')>=0;})[0];if(syn)openSynthModal(id,syn);else synthesizeFolder(id);break;}
         case 'link-note':{var cn=noteById(view.noteId),tn=noteById(id);if(cn&&tn&&tn.title){var tt=tn.title.trim();if((cn.body||'').toLowerCase().indexOf('[['+tt.toLowerCase()+']]')<0){cn.body=(cn.body||'').replace(/\s*$/,'')+'\n\n[['+tt+']]';saveNote(cn);render();toast('Vinculado ✓');}else toast('Já estava vinculada.');}break;}
         case 'edit-folder':openFolderModal(null,folderById(id));break;
         case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''},{replace:true});toast('Pasta excluída.');}break;
