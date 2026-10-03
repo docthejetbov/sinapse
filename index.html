@@ -524,17 +524,36 @@
   /* Ponte com o app: devolve etiquetas sem "#" (o app já prefixa) */
   function autoTags(text,max){return HT.generate(text,{maxHashtags:max||5,minHashtags:1}).hashtags.map(function(h){return h.replace(/^#/,'');});}
   function suggestTags(text){return autoTags(text,5);}
-  function regenAllTags(){
+  /* IA (Gemini via função Supabase) — devolve tags ou null se falhar/offline */
+  function aiTags(text,max){
+    if(!sb||!session||!text||!text.trim())return Promise.resolve(null);
+    var tok=(session&&session.access_token)||SUPABASE_KEY;
+    return fetch(SUPABASE_URL+'/functions/v1/ai-tags',{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+tok},body:JSON.stringify({text:text,max:max||4})})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){if(!d||!d.tags||!d.tags.length)return null;return d.tags.map(function(t){return String(t).toLowerCase().replace(/^#/,'').trim();}).filter(Boolean);})
+      .catch(function(){return null;});
+  }
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  async function regenAllTags(){
     var bookIds={};folders.forEach(function(f){if(f.type==='book')bookIds[f.id]=1;});
     var targets=notes.filter(function(n){return !bookIds[n.folderId];});
     if(!targets.length){toast('Nada para regerar fora dos livros.');return;}
-    targets.forEach(function(n){n.tags=autoTags(noteText(n),4);n.updatedAt=now();});
+    var ai=0,loc=0;
+    toast('Gerando etiquetas com IA… pode levar alguns segundos.');
+    for(var i=0;i<targets.length;i++){
+      var n=targets[i];var txt=noteText(n);
+      var t=await aiTags(txt,4);
+      if(t&&t.length){n.tags=t;ai++;}else{n.tags=autoTags(txt,4);loc++;}
+      n.updatedAt=now();
+      if(i%5===0)render();
+      await sleep(250);
+    }
     render();
     if(sb){
-      var chunk=function(a,s){var o=[];for(var i=0;i<a.length;i+=s)o.push(a.slice(i,i+s));return o;};
+      var chunk=function(a,s){var o=[];for(var k=0;k<a.length;k+=s)o.push(a.slice(k,k+s));return o;};
       var p=Promise.resolve();
       chunk(targets.map(toDbNote),150).forEach(function(ch){p=p.then(function(){return sb.from('notes').upsert(ch);});});
-      p.then(function(){toast('Etiquetas regeneradas ✓ '+targets.length+' notas');}).catch(function(e){toast('Erro ao salvar: '+((e&&e.message)||'tente de novo'));});
+      p.then(function(){toast('Etiquetas regeradas ✓ '+ai+' por IA · '+loc+' local');}).catch(function(e){toast('Erro ao salvar: '+((e&&e.message)||'tente de novo'));});
     } else { toast('Regenerado (demo) ✓ '+targets.length+' notas'); }
   }
 
@@ -1257,7 +1276,7 @@
         case 'del-folder':var fx=folderById(id);if(fx&&confirm('Excluir a pasta "'+fx.name+'"? As notas voltam pro Inbox.')){removeFolder(id);go({name:'folder',folderId:'inbox',noteId:null,tag:null,q:''},{replace:true});toast('Pasta excluída.');}break;
         case 'tag':closeRail();go({name:'search',folderId:view.folderId,noteId:null,tag:tag,q:'',showAllTags:false,tagFilter:''});break;
         case 'ftag':view.name='search';view.noteId=null;view.tag=(view.tag===tag?null:tag);render();break;
-        case 'regen-tags':if(confirm('Regerar etiquetas das notas do Inbox e pastas gerais com o motor novo? As etiquetas dos livros importados são preservadas.')){regenAllTags();}break;
+        case 'regen-tags':if(confirm('Regerar etiquetas das notas do Inbox e pastas gerais usando IA (com recuo para o motor local)? As etiquetas dos livros importados são preservadas.')){regenAllTags();}break;
         case 'more-tags':view.showAllTags=true;render();break;
         case 'less-tags':view.showAllTags=false;view.tagFilter='';render();break;
         case 'add-tag':var ti=$('#e-tags');if(ti){var curr=ti.value.split(',').map(function(s){return s.trim();}).filter(Boolean);if(curr.indexOf(tag)<0)curr.push(tag);ti.value=curr.join(', ');el.style.display='none';}break;
@@ -1278,15 +1297,18 @@
     var dest=folderById(destId)||folderById('inbox');
     var n={id:uidGen('n'),title:autoTitle(text),body:text,folderId:dest?dest.id:'inbox',status:dest&&dest.type!=='inbox'?'kept':'inbox',tags:autoTags(text,3),createdAt:now(),updatedAt:now()};
     saveNote(n);if(cap)cap.value='';render();toast(savedMsg('Capturado')+(n.tags.length?' · '+n.tags.length+' etiquetas':''));
+    aiTags(text,3).then(function(t){if(t&&t.length){n.tags=t;saveNote(n,true);render();}});
   }
   function doSave(){
     var n=noteById(view.noteId);if(!n)return;var b=$('#e-body'),fo=$('#e-folder'),tg=$('#e-tags');
     var text=(b?b.value:noteText(n)).trim();
     n.body=text;n.title=autoTitle(text);
     if(fo){var nf=fo.value;if(nf!==n.folderId){n.folderId=nf;var ff=folderById(nf);if(ff&&ff.type!=='inbox')n.status='kept';}}
+    var userTyped=!!(tg&&tg.value.trim());
     if(tg)n.tags=tg.value.split(',').map(function(s){return s.trim().toLowerCase();}).filter(Boolean).filter(function(v,i,arr){return arr.indexOf(v)===i;});
     if(!n.tags||!n.tags.length)n.tags=autoTags(text,3);
     saveNote(n);editing=false;render();toast(savedMsg('Salvo'));
+    if(!userTyped)aiTags(text,4).then(function(t){if(t&&t.length){n.tags=t;saveNote(n,true);render();}});
   }
   function openWikilink(title){
     var n=noteByTitle(title);
